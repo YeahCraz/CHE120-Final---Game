@@ -38,3 +38,7 @@ To check if any module is up to date, type > pip install name of module --upgrad
 
 A useful link is 
 > https://pyga.me/
+
+<br>
+
+Player sprite is sourced from : https://oco.itch.io/cyberpunk-character-pack-2
