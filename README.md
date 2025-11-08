@@ -1,4 +1,7 @@
-Hi Franz and Winnie! The first you should do after opening the "main" file is press the run button (loop like a play button) 
+
+Hi Franz and Winnie! This tutorial is long yet very informative and probably the best way to start: https://www.youtube.com/watch?v=AY9MnQ4x3zk
+<br>
+The first you should do after opening the "main" file is press the run button (loop like a play button) 
 <br>
 **What is outlined Below is the installation of pygame in a venv!**
 <br>
