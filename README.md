@@ -30,3 +30,8 @@ for any desired module you would like to add to the project.
 It may also ask you would like to update your "pip" copy and paste the code it spits out if you would like to.
 <br>
 To check if any module is up to date, type > pip install name of module --upgrade
+
+<br>
+
+A useful link is 
+> https://pyga.me/
