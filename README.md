@@ -3,6 +3,6 @@ Hi Franz and Winnie! The first you should do after opening the "main" file is pr
 Click on the terminal tilted "powershell" and write "pip install pygame." Similar to how you use anaconda prompt or the command prompt.
 This will download pygame to your VS Code and allow you to use it!. 
 Pygame is a module, you can download other modules the exact same way if you want to grab them from the internet.
-Just type "pip install <moduleName>"
+Just type "pip install \<moduleName\>"
 
 Text or Call me if you are struggling with this part!
