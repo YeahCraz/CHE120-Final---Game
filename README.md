@@ -8,7 +8,7 @@ Hi Franz and Winnie! The first you should do after opening the "main" file is pr
 <br>
 **2.** Next type  ".\venv\Scripts\activate"
 <br>
-**3.** Finally type  "pip install pygame"
+**3.** Finally type  "pip3 install pygame-ce"
 <br>
 You are now able to use pygame, after this point you may type "pip install _______" for any desired module you would like to add to the project.
 It may also ask you would like to update your "pip" copy and paste the code it spits out if you would like to. **However this is optional.**
