@@ -1,4 +1,7 @@
-Hi Franz and Winnie! The first you should do after opening the "main" file is press the run button (loop like a play button) 
+
+Hi Franz and Winnie! This tutorial is long yet very informative and probably the best way to start: https://www.youtube.com/watch?v=AY9MnQ4x3zk
+<br>
+The first you should do after opening the "main" file is press the run button (loop like a play button) 
 <br>
 **What is outlined Below is the installation of pygame in a venv!**
 <br>
@@ -30,3 +33,12 @@ for any desired module you would like to add to the project.
 It may also ask you would like to update your "pip" copy and paste the code it spits out if you would like to.
 <br>
 To check if any module is up to date, type > pip install name of module --upgrade
+
+<br>
+
+A useful link is 
+> https://pyga.me/
+
+<br>
+
+Player sprite is sourced from : https://oco.itch.io/cyberpunk-character-pack-2
