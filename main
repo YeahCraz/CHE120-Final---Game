@@ -1,1 +1,187 @@
-#This will be the main
+import pygame #DO: Import the pygame library
+from pygame.locals import * #DO: Import pygame local variables
+from sys import exit #DO: Import exit function from system (sys) module
+
+
+class Player(pygame.sprite.Sprite): #DO: Define a player class
+    def __init__(self,x,y): #DO: initialize the player class
+        super().__init__() #DO: Required when inheriting from another class
+        #DO: loading sprite sheet, it can viewed in "neo_zero_V1.0____Credit_YaninYunus"
+        self.walk_sheet = pygame.image.load('Ronin\Ronin\spr_RoninRun_strip.png').convert_alpha() #DO: Load the sprite sheet image
+        self.idle_sheet = pygame.image.load('Ronin\Ronin\spr_RoninIdle_strip.png').convert_alpha() #DO: Load the idle sprite sheet image
+
+        #Do: Define sprite dimensions
+        self.sprite_width = 65 #DO: Define the width of a single sprite
+        self.sprite_height = 65 #DO: Define the height of a single sprite
+        self.speed = 300 #DO: Define player speed in pixels per second
+
+        #DO: Define animation properties
+        self.current_frame = 0 #DO: Current frame of animation, used in cycling through frames in animation
+        self.animation_speed = .1 #DO: Speed of animation, controls the speed that said frames are cycled through
+        self.animation_timer = 0 #DO: Timer to track animation progress, ensures that animation speed is consistent
+        self.current_direction = 'right' #DO: Initial direction of the player
+        self.moving = False #DO: Initialize moving variable to track if the player is moving
+
+         #DO: get_rect() is a pygame method that returns a rectangle object that encloses the surface. The center parameter sets the center of the rectangle to the specified (x, y) coordinates.
+
+        #DO: these are the parameters of the following function within the dictionary: load_frames(self, row, start_col, num_frames, flip_horizontal=False):
+        #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
+        self.walk_frames = { #DO: This is a dictionary, similar to a real dictonary. When we look up a word it has multiple meanings. We are then able to parse through these "meanings" to pick out the one we desire to use.
+            'left': self.load_frames(self.walk_sheet,0,0,10,True), #DO: loads animation for walking left
+            'right': self.load_frames(self.walk_sheet,0,0,10), #DO: loads animation for walking right
+        }
+        self.idle_frames = { #DO: This is a dictionary for idle frames
+            'left': self.load_frames(self.idle_sheet,0,0,8,True), #DO: loads animation for idle left
+            'right': self.load_frames(self.idle_sheet,0,0,8), #DO: loads animation for idle right
+        }
+        '''sprite sheets look like this:
+        [Frame1] [Frame2] [Frame3] [Frame4]  
+[Frame1] [Frame2] [Frame3] [Frame4]    
+[Frame1] [Frame2] [Frame3] [Frame4]  
+[Frame1] [Frame2] [Frame3] [Frame4]'''
+
+
+        #DO: creates the image attribute for the sprite
+        self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
+        self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection 
+        
+
+    def load_frames(self, sheet, row, start_col, num_frames, flip_horizontal=False): #DO: Function to load frames from the sprite sheet
+        frames = [] #DO: Create an empty list to store the frames
+
+        for i in range(num_frames): #DO: Loop through the number of frames to load
+            frame = pygame.Surface((self.sprite_width, self.sprite_height), pygame.SRCALPHA) #DO: creates a surface the size of a single sprite with alpha transparency (i.e. the background is see through for the grid pattern in the sprite sheet)
+            frame.blit(sheet, (0, 0), (start_col *self.sprite_width + i * self.sprite_width, row * self.sprite_height, self.sprite_width, self.sprite_height)) #DO: Draws(BLITS) the sprite sheet onto the frame surface  
+            if flip_horizontal: #DO: If flip_horizontal is True
+                frame = pygame.transform.flip(frame, True, False) #DO: Flip the surface(frame) horizontally (True) but not vertically (False)
+            frames.append(frame) #DO: Add the frame to the frames list
+            frames += frames[::-2] #DO: Append the reversed frames excluding the last frame to create a smooth back-and-forth animation
+        return frames #DO: Return the list of frames
+    def movement(self, dt):
+        keys = pygame.key.get_pressed() #DO: Get the state of all keyboard buttons
+
+
+        self.moving = False #DO: Initialize moving variable to track if the player is moving
+        new_direction = self.current_direction #DO: Initialize new_direction with the current direction
+        if keys[K_LEFT] or keys[K_a]: #DO: Check for left movement keys
+            new_direction = 'left'
+            self.moving = True
+        if keys[K_RIGHT] or keys[K_d]: #DO: Check for right movement keys
+            new_direction = 'right'
+            self.moving = True
+        if keys[K_UP] or keys[K_w] or keys[K_DOWN] or keys[K_s]: #DO: Check for up or down movement keys. Up and down dont affect animation.
+            self.moving = True
+        
+        
+        #DO:changes direction if the player is moving, i.e. we begin moving in another direction
+        if self.moving:
+            self.current_direction = new_direction
+        
+
+        #DO: Actual movement logic
+        dx = 0
+        dy = 0
+        if keys[K_LEFT] or keys[K_a]: #DO: Check for left movement keys
+            dx = -self.speed * dt
+        if keys[K_RIGHT] or keys[K_d]: #DO: Check for right movement keys
+            dx = self.speed * dt
+        if keys[K_UP] or keys[K_w]: #DO: Check for up movement keys
+            dy = -self.speed * dt
+        if keys[K_DOWN] or keys[K_s]: #DO: Check for down movement keys
+            dy = self.speed * dt
+        #DO: recall that y is inverted in pygame, so moving up decreases y value, moving down increases y value
+        #DO: also naturally given that direction is changed by +- self.speed * dt left and right would oppose each other and stop movement if both keys are pressed simultaneously
+        #DO: to handle diagonals, we can change the speed of dx by a defined amount
+        if dx != 0 and dy != 0: #DO: If both dx and dy are non-zero, we are moving diagonally
+            dx *= 0.7071 #DO: Adjust dx for diagonal movement (1/sqrt(2))
+            dy *= 0.7071 #DO: Adjust dy for diagonal movement (1/sqrt(2))
+        #DO:"hitbox" created by rect attribute
+        self.rect.x += dx #DO: Update the player's x position in collision logic
+        self.rect.y += dy #DO: Update the player's y position in collision logic
+
+      
+
+
+
+    
+    #DO: special collision handling for weapons, pickups, and enemies would go here
+
+    
+    #handles animation based on movement
+    def animation(self, dt): 
+        if self.moving: #DO: If the player is moving run the walking animation
+            self.animation_timer += dt #DO: Increment the animation timer by delta time
+            if self.animation_timer >= self.animation_speed:
+                self.animation_timer = 0 #DO: Reset the animation timer
+                self.current_frame = (self.current_frame +1) % len(self.walk_frames[self.current_direction])
+                self.image = self.walk_frames[self.current_direction][self.current_frame] #DO: Update the player's image to the current frame of the current direction's animation from the sprite sheet
+        else: #DO: If the player is not moving, set to idle frame
+            self.animation_timer += dt
+            if self.animation_timer >= self.animation_speed:
+                self.animation_timer = 0
+                self.current_frame = (self.current_frame + 1) % len(self.idle_frames[self.current_direction])
+                self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: Update the player's image to the second frame of the current direction's animation
+    
+
+    #DO: Update function to be called every frame
+    def update(self, dt):
+        self.movement(dt)
+        self.animation(dt)
+
+
+class App(): #DO: Define the main application class
+    def __init__(self): #DO: Initialize the application
+        self._running = True #DO: Set running equal to true for while loop in game logic
+        self.screen = None #DO: Placeholder for screen object
+        self.clock = pygame.time.Clock() #DO: Create a clock object to manage frame rate
+        self.width = 1280
+        self.height = 720
+        self.size = self.width, self.height  #initalize screen size
+        self.player = None #DO: Placeholder for player object
+        self.all_sprites = pygame.sprite.Group() #DO: Create a sprite group to manage all sprites in the game
+        self.dt = 0 #DO: Define delta time variable
+
+
+    def on_init(self): #DO: Calls pygame.init()
+        pygame.init()
+        self.screen = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF) #DO: creates disply
+        self._running = True #DO:Set running equal to true
+
+        #DO: Create player object at center of screen
+        self.player = Player(self.width // 2, self.height // 2)
+        self.all_sprites.add(self.player) #DO: Add player to the all_sprites group
+        return True
+ 
+    def on_event(self, event): #DO: Handle events
+        if event.type == pygame.QUIT: #DO: if the user clicks the clsoe button ends program
+            self._running = False
+
+
+    def on_loop(self): #DO: Main loop logic
+        self.all_sprites.update(self.dt) #DO: Update all sprites in the all_sprites group
+
+
+    def on_render(self): #DO: Render the display
+        self.screen.fill((50,50,100)) #DO: reset the screen to black
+
+        self.all_sprites.draw(self.screen) #DO: Draw all sprites in the all_sprites group to the screen
+        pygame.display.flip() #DO: Update the full display surface to the screen
+
+
+    def on_cleanup(self): #DO: cleanup resources
+        pygame.quit() #DO: quits pygame
+        exit() #DO: kills program no matter what
+    def on_execute(self): #DO: Execute the application
+        if not self.on_init(): #DO:initalize the application
+            self._running = False
+ 
+        while self._running: #DO: game loop in which events, loop logic, then rendering occurs
+            self.dt = self.clock.tick(144) / 1000.0 #DO: Calculate delta time in seconds
+            for event in pygame.event.get(): #DO: Event handling loop
+                self.on_event(event)
+            self.on_loop() #DO: main loop logic
+            self.on_render() #DO: render the display
+        self.on_cleanup() #DO: cleanup prior to quitting
+if (__name__ == "__main__") : #DO: Run the application
+    theApp = App()
+    theApp.on_execute()
