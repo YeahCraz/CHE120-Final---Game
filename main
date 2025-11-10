@@ -118,7 +118,7 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
     #DO: special collision handling for weapons, pickups, and enemies would go here
 
     
-    #handles animation based on movement
+    #DO: handles animation based on movement
     def animation(self, dt): 
         if self.moving: #DO: If the player is moving run the walking animation
             self.animation_timer += dt #DO: Increment the animation timer by delta time
