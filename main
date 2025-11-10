@@ -1,3 +1,8 @@
+#DO: Please use two spaces to seperate functions and classes
+#DO: also list variables for certain proerties seperately. Place variables at the beginning of the class if possible please
+#DO: also comment your intials prior to commenting so we know who to ask if we have any question
+
+
 import pygame #DO: Import the pygame library
 from pygame.locals import * #DO: Import pygame local variables
 from sys import exit #DO: Import exit function from system (sys) module
@@ -10,7 +15,7 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         self.walk_sheet = pygame.image.load('Ronin\Ronin\spr_RoninRun_strip.png').convert_alpha() #DO: Load the sprite sheet image
         self.idle_sheet = pygame.image.load('Ronin\Ronin\spr_RoninIdle_strip.png').convert_alpha() #DO: Load the idle sprite sheet image
 
-        #Do: Define sprite dimensions
+        #DO: Define sprite dimensions
         self.sprite_width = 65 #DO: Define the width of a single sprite
         self.sprite_height = 65 #DO: Define the height of a single sprite
         self.speed = 300 #DO: Define player speed in pixels per second
@@ -27,12 +32,12 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         #DO: these are the parameters of the following function within the dictionary: load_frames(self, row, start_col, num_frames, flip_horizontal=False):
         #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
         self.walk_frames = { #DO: This is a dictionary, similar to a real dictonary. When we look up a word it has multiple meanings. We are then able to parse through these "meanings" to pick out the one we desire to use.
-            'left': self.load_frames(self.walk_sheet,0,0,10,True), #DO: loads animation for walking left
-            'right': self.load_frames(self.walk_sheet,0,0,10), #DO: loads animation for walking right
+            'left': self.load_frames(self.walk_sheet,0,0,10,True,True), #DO: loads animation for walking left
+            'right': self.load_frames(self.walk_sheet,0,0,10,False,True), #DO: loads animation for walking right
         }
         self.idle_frames = { #DO: This is a dictionary for idle frames
-            'left': self.load_frames(self.idle_sheet,0,0,8,True), #DO: loads animation for idle left
-            'right': self.load_frames(self.idle_sheet,0,0,8), #DO: loads animation for idle right
+            'left': self.load_frames(self.idle_sheet,0,0,8,True,True), #DO: loads animation for idle left
+            'right': self.load_frames(self.idle_sheet,0,0,8,False,True), #DO: loads animation for idle right
         }
         '''sprite sheets look like this:
         [Frame1] [Frame2] [Frame3] [Frame4]  
@@ -46,7 +51,7 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection 
         
 
-    def load_frames(self, sheet, row, start_col, num_frames, flip_horizontal=False): #DO: Function to load frames from the sprite sheet
+    def load_frames(self, sheet, row, start_col, num_frames, flip_horizontal=False, append_reverse = False): #DO: Function to load frames from the sprite sheet
         frames = [] #DO: Create an empty list to store the frames
 
         for i in range(num_frames): #DO: Loop through the number of frames to load
@@ -55,7 +60,8 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
             if flip_horizontal: #DO: If flip_horizontal is True
                 frame = pygame.transform.flip(frame, True, False) #DO: Flip the surface(frame) horizontally (True) but not vertically (False)
             frames.append(frame) #DO: Add the frame to the frames list
-            frames += frames[::-2] #DO: Append the reversed frames excluding the last frame to create a smooth back-and-forth animation
+            if append_reverse: #DO: If a sprite sheet lacks a complete animation it will loop back to the starting animation 
+                frames += frames[::-1] #DO: Append the reversed frames excluding the last frame to create a smooth back-and-forth animation
         return frames #DO: Return the list of frames
     def movement(self, dt):
         keys = pygame.key.get_pressed() #DO: Get the state of all keyboard buttons
@@ -78,7 +84,12 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
             self.current_direction = new_direction
         
 
-        #DO: Actual movement logic
+        #DO: Actual movement logic 
+
+
+        #DO: May have to change our left moving speed as it seems faster!!!!
+        
+                
         dx = 0
         dy = 0
         if keys[K_LEFT] or keys[K_a]: #DO: Check for left movement keys
