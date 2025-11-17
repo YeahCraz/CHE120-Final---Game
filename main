@@ -205,7 +205,7 @@ if (__name__ == "__main__") : #DO: Run the application
 
 class Projectile(): #FS: Defining the projectile class. 
     #FS: Gonna be honest, no idea how tf to handle this.
-    def projectile_creation(velocity,aimed_angle,projectile_id,owner_id,damage_value)
+    def projectile_creation(velocity,aimed_angle,projectile_id,owner_id,damage_value):
         pass #FS: Placeholder
     #FS: Placeholder
     #FS: Alright, I've yoinked the projectile sprite sheet from the Touhou franchise, and have it uploaded to the Github.
