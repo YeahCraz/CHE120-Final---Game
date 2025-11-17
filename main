@@ -100,6 +100,10 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
             dy = -self.speed * dt
         if keys[K_DOWN] or keys[K_s]: #DO: Check for down movement keys
             dy = self.speed * dt
+        if keys[K_LSHIFT]: #FS: Check for movement with shift, for focus movement
+            dx *= 0.5
+            dy *= 0.5
+            # FS: Seems to currently break downwards + right movement.
         #DO: recall that y is inverted in pygame, so moving up decreases y value, moving down increases y value
         #DO: also naturally given that direction is changed by +- self.speed * dt left and right would oppose each other and stop movement if both keys are pressed simultaneously
         #DO: to handle diagonals, we can change the speed of dx by a defined amount
@@ -196,3 +200,24 @@ class App(): #DO: Define the main application class
 if (__name__ == "__main__") : #DO: Run the application
     theApp = App()
     theApp.on_execute()
+
+
+
+class Projectile(): #FS: Defining the projectile class. 
+    #FS: Gonna be honest, no idea how tf to handle this.
+    def projectile_creation(velocity,aimed_angle,projectile_id,owner_id,damage_value)
+        pass #FS: Placeholder
+    #FS: Placeholder
+    #FS: Alright, I've yoinked the projectile sprite sheet from the Touhou franchise, and have it uploaded to the Github.
+    projectile_dictionary = {
+        "plasma": 1,
+        "caliber": 2,
+        "bean": 3,
+        "star_sm": 4,
+        "star_med": 5,
+        "rice": 6,
+        "seed": 7,
+        "mentos": 8,
+        "water": 9,
+        "laser": 10
+    } #FS: These probably make sense once you actually see the sheet.
