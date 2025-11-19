@@ -19,6 +19,7 @@ class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
         self.projectile_type = projectile_type #FS: Will use projectile dictionary and touhou sprite sheet eventually
         self.owner_id = owner_id #FS: Projectile owner, will be used to make sure players/enemies don't hit themselves
         self.damage_value = damage_value #FS: Damage value of the projectile
+        # FS: Alright, for now instead of using the spritesheet (since idk how), Draw a simple circle for the projectile; color depends on type
         radius = 8
         if self.projectile_type == 'plasma': #FS: Added handling for ID of the projectile type. Nice!
             color = (255, 255, 0)  # yellow
