@@ -7,6 +7,50 @@ import pygame #DO: Import the pygame library
 from pygame.locals import * #DO: Import pygame local variables
 from sys import exit #DO: Import exit function from system (sys) module
 
+import random #FS: For potential randomization of projectile/character/enemy properties
+
+class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
+    def __init__(self, x, y, velocity, angle, projectile_type, owner_id, damage_value): #FS: Class for initializing projectiles
+        super().__init__()
+        self.x = x #FS: x position of projectile
+        self.y = y #FS: y position of projectile
+        self.velocity = velocity #FS: Speed of the projectile
+        self.angle = angle #FS: Angle of bullet in radians, can be randomized/offset for styles
+        self.projectile_type = projectile_type #FS: Will use projectile dictionary and touhou sprite sheet eventually
+        self.owner_id = owner_id #FS: Projectile owner, will be used to make sure players/enemies don't hit themselves
+        self.damage_value = damage_value #FS: Damage value of the projectile
+        radius = 8
+        if self.projectile_type == 'plasma': #FS: Added handling for ID of the projectile type. Nice!
+            color = (255, 255, 0)  # yellow
+        elif self.projectile_type == 'laser': 
+            color = (50, 150, 255)  # blue
+        else:
+            color = (255, 255, 255)  # default white
+        self.image = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
+        pygame.draw.circle(self.image, color, (radius, radius), radius) #FS: Currently makes a circle, can be changed.
+        self.rect = self.image.get_rect(center=(x, y))
+
+    def update(self, dt):
+        import math
+        dx = self.velocity * math.cos(self.angle) * dt #FS: velocity of projectile in x
+        dy = self.velocity * math.sin(self.angle) * dt #FS: velocity of projectile in y
+        self.rect.x += dx
+        self.rect.y += dy
+        
+    #FS: Projectile type dictionary
+    projectile_dictionary = {
+        "plasma": 1,
+        "caliber": 2,
+        "bean": 3,
+        "star_sm": 4,
+        "star_med": 5,
+        "rice": 6,
+        "seed": 7,
+        "mentos": 8,
+        "water": 9,
+        "laser": 10
+    }
+
 
 class Player(pygame.sprite.Sprite): #DO: Define a player class
     def __init__(self,x,y): #DO: initialize the player class
@@ -143,6 +187,14 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         self.movement(dt)
         self.animation(dt)
 
+    #FS: Fire a projectile from the player
+    def fire_projectile(self, velocity, angle, projectile_type, damage_value):
+        projectile = Projectile(self.rect.centerx, self.rect.centery, velocity, angle, projectile_type, id(self), damage_value)
+        # FS: Add projectile to the same group as player (assumes all_sprites)
+        for group in self.groups():
+            group.add(projectile)
+        return projectile
+
 
 class App(): #DO: Define the main application class
     def __init__(self): #DO: Initialize the application
@@ -170,10 +222,31 @@ class App(): #DO: Define the main application class
     def on_event(self, event): #DO: Handle events
         if event.type == pygame.QUIT: #DO: if the user clicks the clsoe button ends program
             self._running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_e:
+                # FS: Fires projectile in front of player
+                direction = self.player.current_direction
+                # FS: Angle: right = 0, left = pi (turns out it uses radians huh)
+                import math
+                angle = 0 + random.random() - random.random() if direction == 'right' else math.pi + random.random() - random.random() #FS: Adjustable angle, some bullets can be random spread maybe??
+                velocity = 500 #FS: Adjustable velocity
+                projectile_type = 'plasma' # FS: probably will switch these values over to IDs later on
+                damage_value = 10
+                self.player.fire_projectile(velocity, angle, projectile_type, damage_value)
+            if event.key == pygame.K_p:
+                # FS: Fires projectile in front of player
+                direction = self.player.current_direction
+                # FS: Angle: right = 0, left = pi
+                import math
+                angle = 0 if direction == 'right' else math.pi
+                velocity = 750 # FS: adjustable velocity
+                projectile_type = 'laser' # FS: probably will switch these values over to IDs later on
+                damage_value = 10
+                self.player.fire_projectile(velocity, angle, projectile_type, damage_value)
 
 
     def on_loop(self): #DO: Main loop logic
-        self.all_sprites.update(self.dt) #DO: Update all sprites in the all_sprites group
+            self.all_sprites.update(self.dt) #DO: Update all sprites in the all_sprites group
 
 
     def on_render(self): #DO: Render the display
@@ -203,21 +276,4 @@ if (__name__ == "__main__") : #DO: Run the application
 
 
 
-class Projectile(): #FS: Defining the projectile class. 
-    #FS: Gonna be honest, no idea how tf to handle this.
-    def projectile_creation(velocity,aimed_angle,projectile_id,owner_id,damage_value):
-        pass #FS: Placeholder
-    #FS: Placeholder
-    #FS: Alright, I've yoinked the projectile sprite sheet from the Touhou franchise, and have it uploaded to the Github.
-    projectile_dictionary = {
-        "plasma": 1,
-        "caliber": 2,
-        "bean": 3,
-        "star_sm": 4,
-        "star_med": 5,
-        "rice": 6,
-        "seed": 7,
-        "mentos": 8,
-        "water": 9,
-        "laser": 10
-    } #FS: These probably make sense once you actually see the sheet.
+
