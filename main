@@ -221,15 +221,21 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.damage = 10 #WB: Define standard enemy's damage
             
             # WB: Create a simple placeholder image for testing
-            self.image = pygame.Surface((50, 50))
-            self.image.fill((255, 0, 0))  # Red square
-            self.rect = self.image.get_rect(center=(x, y))
+            self.image = pygame.Surface((50, 50)) #WB: Makes the enemy look like a square
+            self.image.fill((255, 0, 0))  #WB: Makes the enemy look like a red square
+            self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
             
             #WB: Define standard enemy's dimensions
             self.sprite_width = 75 #WB: Define standard enemy's width 
             self.sprite_height = 75 #WB: Define standard enemy's height
-            self.speed = 295 #WB: Define standard enemy's speed
-
+            self.speed = 295 #WB: Define standard enemy's speed (slightly slower than player)
+            
+            #WB: Defines animation properties
+            self.current_frame = 0
+            self.animation_speed = 0.15 #WB: Enemy animation slightly slower than player
+            self.animation_timer = 0.0
+            self.current_direction = 'right'  #WB: Based on player's position
+            self.moving = False
 
         elif enemy_type == "moderate": #WB: Moderate type of enemy
             #WB: Define moderate enemy powers
@@ -237,10 +243,22 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.damage = 30 #WB: Define moderate enemy's damage
             self.image = pygame.image.load().convert_alpha() #WB: Load the moderate enemy's image
             
+             # WB: Create a simple placeholder image for testing
+            self.image = pygame.Surface((50, 20)) #WB: Makes the enemy a rectangle
+            self.image.fill((0, 255, 0))  #WB: Makes the enemy look like a green rectangle
+            self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
+            
             #WB: Define moderate enemy's dimensions
-            self.sprite_width = 80 #WB: Define moderate enemy's width 
-            self.sprite_height = 80 #WB: Define moderate enemy's height
-            self.speed = 290 #WB: Define moderate enemy's speed
+            self.sprite_width = 60 #WB: Define moderate enemy's width 
+            self.sprite_height = 60 #WB: Define moderate enemy's height
+            self.speed = 290 #WB: Define moderate enemy's speed (slightly slower than player and than other enemy types)
+            
+            #WB: Defines animation properties
+            self.current_frame = 0
+            self.animation_speed = 0.15 #WB: Enemy animation slightly slower than player
+            self.animation_timer = 0.0
+            self.current_direction = 'right'  #WB: Based on player's position
+            self.moving = False
 
         elif enemy_type == "strong": #WB: Strong type of enemy 
             #WB: Define strong enemy's powers
@@ -249,26 +267,81 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.image = pygame.image.load().convert_alpha() #WB: Load the strong enemy image
             
             #WB: Define strong enemy's dimensions
-            self.sprite_width = 60 #WB: Define the width of the strong enemy
-            self.sprite_height = 60 #WB: Define the width of the strong enemy
-            self.speed = 295 #WB: Define the speed of the strong enemy
-    
-    def movement(self, player_rect, dt): #WB: Define enemy's movements
-        self.rect.x += self.speed * dt #WB: Makes the enemy move to the right
+            self.sprite_width = 80 #WB: Define the width of the strong enemy
+            self.sprite_height = 80 #WB: Define the width of the strong enemy
+            self.speed = 295 #WB: Define the speed of the strong enemy (slightly slower than player)
+           
+            # WB: Create a simple placeholder image for testing
+            self.image = pygame.Surface((60, 60)) #WB: I'm going to change the image later but makes the enemy a square
+            self.image.fill((0, 0, 255))  #WB: Makes the enemy look like a blue square
+            self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
+            
+            #WB: Defines animation properties
+            self.current_frame = 0
+            self.animation_speed = 0.15 #WB: Enemy animation slightly slower than player
+            self.animation_timer = 0.0
+            self.current_direction = 'right'  #WB: Based on player's position
+            self.moving = False
+        
 
+        #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
+        #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
+        self.walk_frames = {
+        "left": self.load_frames(walk_sheet, 0, 0, num_frames, True), #WB: Loads animation for walking left
+        "right": self.load_frames(walk_sheet, 0, 0, num_frames, False) #WB: Loads animation for walking right 
+        }
+        self.idle_frames = {
+        "left": self.load_frames(idle_sheet, 0, 0, num_frames, True), #WB: Loads animation for idle left
+        "right": self.load_frames(idle_sheet, 0, 0, num_frames, False) #WB: Loads animation for idle right
+        }
+
+    def movement(self, player_rect, dt): #WB: Define enemy's movements
         player_position = Vector2(player_rect.center) #WB: Direction vector for the player
         enemy_position = Vector2(self.rect.center) #WB: Direction vector for the enemy
-
         direction = player_position - enemy_position #WB: Creates a direciton vector towards player
-
         distance = direction.length() #WB: Makes it that the enemy only moves if the player is within range
-        if distance > 0 and distance < 500: #WB: 500 pixels range (might change the number later)
+
+        if player_position.x < enemy_position.x: #WB: Makes the enemy's direction so that it always faces the player
+            self.current_direction = "left"
+        else:
+            self.current_direction = "right"
+
+        if distance > 0 and distance < 800: #WB: 800 pixels range (might change the number later)
             direction = direction.normalize() #WB: Normalize the direction to make the length equal to 1
+            #WB: Moves enemy towards player
+            self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
+            self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
+
+
+    
+    def enemy_animations (self, dt): #WB: Handles animations based on movement
+        if self.moving: #DO: If the enemy is moving run the walking animation
+            self.animation_timer += dt #DO: Increment the animation timer by delta time
+            if self.animation_timer >= self.animation_speed:
+                self.animation_timer = 0 #DO: Reset the animation timer
+                self.current_frame = (self.current_frame +1) % len(self.walk_frames[self.current_direction])
+                self.image = self.walk_frames[self.current_direction][self.current_frame] #DO: Update the enemy's image to the current frame of the current direction's animation from the sprite sheet
+        else: #DO: If the player is not moving, set to idle frame
+            self.animation_timer += dt
+            if self.animation_timer >= self.animation_speed:
+                self.animation_timer = 0.
+                self.current_frame = (self.current_frame + 1) % len(self.idle_frames[self.current_direction])
+                self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: Update the player's image to the second frame of the current direction's animation
+    
+
+    #DO: Update function to be called every frame
+    def update(self, dt, player_rect): 
+        self.movement(player_rect, dt) #WB: Updates the enemy's movements
+        self.enemy_animations(dt) #WB: Calls the animation method
         
-        
-        #WB: Moves enemy towards player
-        self.rect.x += direction.x * self.speed * dt
-        self.rect.y += direction.y * self.speed * dt
+        #WB: Fire a projectile from the enemy
+    def enemy_projectile(self, velocity, angle, projectile_type, damage_value):
+        projectile = Projectile(self.rect.centerx, self.rect.centery, velocity, angle, projectile_type, id(self), damage_value)
+        #WB: Add projectile to the same group as enemy 
+        for group in self.groups():
+            group.add(projectile)
+        return projectile
+
 
 class Camera(pygame.sprite.Group):
     def __init__(self,background):
@@ -387,8 +460,8 @@ class App(): #DO: Define the main application class
                 #FS: END OF TEST CODE, IGNORE
     
     def on_loop(self): #DO: Main loop logic
-        for enemy in self.enemies: 
-                enemy.movement #WB: Add movement to the enemy
+        for enemy in self.enemies:     
+            enemy.update(self.dt, self.player.rect) #WB: Makes the enemy chase the player
         self.all_sprites.update(self.dt) #DO: Update all sprites in the all_sprites group
             
 
