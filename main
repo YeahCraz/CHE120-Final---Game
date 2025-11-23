@@ -270,19 +270,6 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         self.rect.x += direction.x * self.speed * dt
         self.rect.y += direction.y * self.speed * dt
 
-            
-
-
-        
-
-            
-
-        
-               
-
-
-        
-
 class Camera(pygame.sprite.Group):
     def __init__(self,background):
         super().__init__()
