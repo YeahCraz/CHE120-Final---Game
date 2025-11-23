@@ -4,21 +4,24 @@
 
 
 import pygame #DO: Import the pygame library
-from pygame.locals import * #DO: Import pygame local variables
+from pygame.locals import * #DO: Import pygame local variables,
 from sys import exit #DO: Import exit function from system (sys) module
 from pygame.math import Vector2 #WB: For player and enemy movement 
+import pytmx #DO: Import pytmx (makes maps)
+import math #DO: importing math at the top is better notation and allows for it to be used globally
 import random #FS: For potential randomization of projectile/character/enemy properties
 
 class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
     def __init__(self, x, y, velocity, angle, projectile_type, owner_id, damage_value): #FS: Class for initializing projectiles
+        #DO: changed variables to float where precision would be useful
         super().__init__()
-        self.x = x #FS: x position of projectile
-        self.y = y #FS: y position of projectile
-        self.velocity = velocity #FS: Speed of the projectile
-        self.angle = angle #FS: Angle of bullet in radians, can be randomized/offset for styles
+        self.x = float(x) #FS: x position of projectile
+        self.y = float(y) #FS: y position of projectile
+        self.velocity = float(velocity) #FS: Speed of the projectile
+        self.angle = float(angle) #FS: Angle of bullet in radians, can be randomized/offset for styles
         self.projectile_type = projectile_type #FS: Will use projectile dictionary and touhou sprite sheet eventually
         self.owner_id = owner_id #FS: Projectile owner, will be used to make sure players/enemies don't hit themselves
-        self.damage_value = damage_value #FS: Damage value of the projectile
+        self.damage_value = float(damage_value) #FS: Damage value of the projectile
         # FS: Alright, for now instead of using the spritesheet (since idk how), Draw a simple circle for the projectile; color depends on type
         radius = 8
         if self.projectile_type == 'plasma': #FS: Added handling for ID of the projectile type. Nice!
@@ -35,8 +38,9 @@ class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
         import math
         dx = self.velocity * math.cos(self.angle) * dt #FS: velocity of projectile in x
         dy = self.velocity * math.sin(self.angle) * dt #FS: velocity of projectile in y
-        self.rect.x += dx
-        self.rect.y += dy
+        #DO: correcting for rects given that i changed these to floats
+        self.rect.x += int(dx)
+        self.rect.y += int(dy)
     
     #FS: Projectile type dictionary
     projectile_dictionary = {
@@ -56,6 +60,9 @@ class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
 class Player(pygame.sprite.Sprite): #DO: Define a player class
     def __init__(self,x,y): #DO: initialize the player class
         super().__init__() #DO: Required when inheriting from another class
+        #DO: turn x and y into float if not already
+        self.x = float(x)
+        self.y = float(y)
         #DO: loading sprite sheet, it can viewed in "neo_zero_V1.0____Credit_YaninYunus"
         self.walk_sheet = pygame.image.load('Ronin\Ronin\spr_RoninRun_strip.png').convert_alpha() #DO: Load the sprite sheet image
         self.idle_sheet = pygame.image.load('Ronin\Ronin\spr_RoninIdle_strip.png').convert_alpha() #DO: Load the idle sprite sheet image
@@ -63,12 +70,12 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         #DO: Define sprite dimensions
         self.sprite_width = 65 #DO: Define the width of a single sprite
         self.sprite_height = 65 #DO: Define the height of a single sprite
-        self.speed = 300 #DO: Define player speed in pixels per second
+        self.speed = 300. #DO: Define player speed in pixels per second
 
         #DO: Define animation properties
         self.current_frame = 0 #DO: Current frame of animation, used in cycling through frames in animation
         self.animation_speed = .1 #DO: Speed of animation, controls the speed that said frames are cycled through
-        self.animation_timer = 0 #DO: Timer to track animation progress, ensures that animation speed is consistent
+        self.animation_timer = 0. #DO: Timer to track animation progress, ensures that animation speed is consistent
         self.current_direction = 'right' #DO: Initial direction of the player
         self.moving = False #DO: Initialize moving variable to track if the player is moving
 
@@ -135,16 +142,16 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         #DO: May have to change our left moving speed as it seems faster!!!!
         
                 
-        dx = 0
-        dy = 0
+        dx = 0.
+        dy = 0.
         if keys[K_LEFT] or keys[K_a]: #DO: Check for left movement keys
             dx = -self.speed * dt
         if keys[K_RIGHT] or keys[K_d]: #DO: Check for right movement keys
-            dx = self.speed * dt*1.425 #FS: Currently, right movement is roughly this factor slower than left movement. Until I find the fix in the logic, we'll go with this.
+            dx = self.speed * dt #FS: Currently, right movement is roughly this factor slower than left movement. Until I find the fix in the logic, we'll go with this.
         if keys[K_UP] or keys[K_w]: #DO: Check for up movement keys
             dy = -self.speed * dt
         if keys[K_DOWN] or keys[K_s]: #DO: Check for down movement keys
-            dy = self.speed * dt*1.425 #FS: The same issue persists with the down direction. I've applied the fix here as well.
+            dy = self.speed * dt #FS: The same issue persists with the down direction. I've applied the fix here as well.
         if keys[K_LSHIFT]: #FS: Check for movement with shift, for focus movement
             dx *= 0.75 #+ focus_factor #FS: Potentially, these factors can be altered with upgrades/options.
             dy *= 0.75 #+ focus_factor
@@ -153,15 +160,14 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         #DO: also naturally given that direction is changed by +- self.speed * dt left and right would oppose each other and stop movement if both keys are pressed simultaneously
         #DO: to handle diagonals, we can change the speed of dx by a defined amount
         if dx != 0 and dy != 0: #DO: If both dx and dy are non-zero, we are moving diagonally
-            dx *= 0.7071 #DO: Adjust dx for diagonal movement (1/sqrt(2))
-            dy *= 0.7071 #DO: Adjust dy for diagonal movement (1/sqrt(2))
+           dist = math.sqrt(dx*dx + dy*dy) #DO: takes the norm of the diagonal vector
+           if dist > 0:
+               dx = dx / dist * self.speed * dt #DO: dx / hypotenuse * speed * delta time
+               dy = dy / dist * self.speed * dt
         #DO:"hitbox" created by rect attribute
-        self.rect.x += dx #DO: Update the player's x position in collision logic
-        self.rect.y += dy #DO: Update the player's y position in collision logic
-
-      
-
-
+        #DO: intifying from a float
+        self.rect.x += int(dx) #DO: Update the player's x position in collision logic
+        self.rect.y += int(dy) #DO: Update the player's y position in collision logic
 
     
     #DO: special collision handling for weapons, pickups, and enemies would go here
@@ -178,7 +184,7 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         else: #DO: If the player is not moving, set to idle frame
             self.animation_timer += dt
             if self.animation_timer >= self.animation_speed:
-                self.animation_timer = 0
+                self.animation_timer = 0.
                 self.current_frame = (self.current_frame + 1) % len(self.idle_frames[self.current_direction])
                 self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: Update the player's image to the second frame of the current direction's animation
     
@@ -289,14 +295,23 @@ class App(): #DO: Define the main application class
         self.player = None #DO: Placeholder for player object
         self.all_sprites = pygame.sprite.Group() #DO: Create a sprite group to manage all sprites in the game
         self.enemies = pygame.sprite.Group() #WB: Create a enemies group to manage all enemies in the game
+        
         self.dt = 0 #DO: Define delta time variable
+        self.dt = 0. #DO: Define delta time variable
+        #DO: Placeholders for the map variables we need, these variabels (pytmx.load_pygame('...')  must be initalized after the screen)
+        self.tmx_data = None
+        self.tile_width = None
+        self.tile_height = None 
 
 
     def on_init(self): #DO: Calls pygame.init()
         pygame.init()
-        self.screen = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF) #DO: creates disply
+        self.screen = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF) #DO: creates display
         self._running = True #DO:Set running equal to true
-
+        #DO: map loading
+        self.tmx_data = pytmx.load_pygame("Undead_land.tmx")
+        self.tile_width = self.tmx_data.tilewidth
+        self.tile_height = self.tmx_data.tileheight
         #DO: Create player object at center of screen
         self.player = Player(self.width // 2, self.height // 2)
         self.all_sprites.add(self.player) #DO: Add player to the all_sprites group
@@ -337,11 +352,12 @@ class App(): #DO: Define the main application class
                 velocity = 500 #FS: Adjustable velocity
                 projectile_type = 'plasma' # FS: probably will switch these values over to IDs later on
                 damage_value = 10
-                triplet_angles = [-math.pi/6,0,math.pi/6] if direction == 'right' else [math.pi - math.pi/6, math.pi, math.pi + math.pi/6]
+                triplet_angles = [-math.pi/6,0,math.pi/6] if direction == 'right' else [math.pi + math.pi/6, math.pi, math.pi - math.pi/6]
                 for angle in triplet_angles:
                     self.player.player_projectile(velocity, angle, projectile_type, damage_value)
                 #FS: Some current issues, angles aren't equally spread and I don't know why yet.
-
+                #DO: recall that when going around a circle to go beyond pi into Q3 of a cartesian plane you must add pi not subtract
+                #DO: swapped ur signs in the "right" logic and it is now even.
 
                 #FS: ALL OF THIS IS TEST CODE, IGNORE
                 '''    
@@ -354,14 +370,14 @@ class App(): #DO: Define the main application class
     
     def on_loop(self): #DO: Main loop logic
         for enemy in self.enemies: 
-                enemy.movement(self.player.rect, self.dt) #WB: Add movement to the enemy
+                enemy.movement #WB: Add movement to the enemy
         self.all_sprites.update(self.dt) #DO: Update all sprites in the all_sprites group
             
 
 
     def on_render(self): #DO: Render the display
         self.screen.fill((50,50,100)) #DO: reset the screen to black
-
+        self.draw_map(self.tmx_data, self.screen,self.tile_width,self.tile_height)
         self.all_sprites.draw(self.screen) #DO: Draw all sprites in the all_sprites group to the screen
         pygame.display.flip() #DO: Update the full display surface to the screen
 
@@ -370,6 +386,15 @@ class App(): #DO: Define the main application class
     def on_cleanup(self): #DO: cleanup resources
         pygame.quit() #DO: quits pygame
         exit() #DO: kills program no matter what
+
+    def draw_map(self, tmx_data, screen, tile_width, tile_height): #DO: draws a map based on given parameters using a desired map file  (as seen in the init)
+        for layer in tmx_data.visible_layers: #DO: For each layer in our layered map
+            if isinstance(layer, pytmx.TiledTileLayer):
+                for x, y, gid in layer: #DO:
+                    tile = tmx_data.get_tile_image_by_gid(gid)
+                    if tile: #DO: if it is a tile it blits the tile on screen
+                        screen.blit(tile, (x * tile_width, y * tile_height)) 
+
     def on_execute(self): #DO: Execute the application
         if not self.on_init(): #DO:initalize the application
             self._running = False
@@ -382,8 +407,8 @@ class App(): #DO: Define the main application class
             self.on_render() #DO: render the display
         self.on_cleanup() #DO: cleanup prior to quitting
 if (__name__ == "__main__") : #DO: Run the application
-    theApp = App()
-    theApp.on_execute()
+    the_app = App()
+    the_app.on_execute()
 
 
 
