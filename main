@@ -78,7 +78,6 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         self.animation_timer = 0. #DO: Timer to track animation progress, ensures that animation speed is consistent
         self.current_direction = 'right' #DO: Initial direction of the player
         self.moving = False #DO: Initialize moving variable to track if the player is moving
-
          #DO: get_rect() is a pygame method that returns a rectangle object that encloses the surface. The center parameter sets the center of the rectangle to the specified (x, y) coordinates.
 
         #DO: these are the parameters of the following function within the dictionary: load_frames(self, row, start_col, num_frames, flip_horizontal=False):
@@ -335,25 +334,57 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
 
 
         
+
+class Camera(pygame.sprite.Group):
+    def __init__(self,background):
+        super().__init__()
+        self.offset = pygame.math.Vector2() #DO: we must offset the surroundings by the -vector of our player's movement
+        self.background = background
+        self.floor_rect = self.background.get_rect(topleft = (0,0))
+    def custom_draw(self,width,height,Player,all_sprites,screen): 
+        '''
+        DO:
+        width - the width of the screen
+        height - the height of the screen
+        Player - our player that will be followed by the camera
+        all_sprites - the group of sprites containing everything (in app class)
+        screen - the actual screen variable (located in app)
+        '''
+        self.offset.x = Player.rect.centerx - width // 2
+        self.offset.y = Player.rect.centery - height // 2
+        
+        #DO: drawing map
+        floor_offset_pos = self.floor_rect.topleft - self.offset
+        screen.blit(self.background, floor_offset_pos)
+
+        for sprite in all_sprites:
+            offset_pos = sprite.rect.topleft - self.offset
+            screen.blit(sprite.image,offset_pos)
+        
+
+
+
 class App(): #DO: Define the main application class
     
     def __init__(self): #DO: Initialize the application
         self._running = True #DO: Set running equal to true for while loop in game logic
         self.screen = None #DO: Placeholder for screen object
         self.clock = pygame.time.Clock() #DO: Create a clock object to manage frame rate
-        self.width = 1280
-        self.height = 720
+        self.width = 1109
+        self.height = 624
         self.size = self.width, self.height  #initalize screen size
         self.player = None #DO: Placeholder for player object
         self.all_sprites = pygame.sprite.Group() #DO: Create a sprite group to manage all sprites in the game
         self.enemies = pygame.sprite.Group() #WB: Create a enemies group to manage all enemies in the game
         
         self.dt = 0 #DO: Define delta time variable
+        self.camera = None #DO: placeholder for camera variable
         self.dt = 0. #DO: Define delta time variable
         #DO: Placeholders for the map variables we need, these variabels (pytmx.load_pygame('...')  must be initalized after the screen)
         self.tmx_data = None
         self.tile_width = None
         self.tile_height = None 
+        self.background = None #DO: Surface for background placeholder
 
 
     def on_init(self): #DO: Calls pygame.init()
@@ -364,8 +395,11 @@ class App(): #DO: Define the main application class
         self.tmx_data = pytmx.load_pygame("Undead_land.tmx")
         self.tile_width = self.tmx_data.tilewidth
         self.tile_height = self.tmx_data.tileheight
-        #DO: Create player object at center of screen
-        self.player = Player(self.width // 2, self.height // 2)
+        #DO: Create background surface and camera
+        self.background = self.create_background_surface()
+        self.camera = Camera(self.background)
+        #DO: Create player object at center of surface(map)
+        self.player = Player(self.tmx_data.width *self.tile_width // 2, self.tmx_data.height * self.tile_width // 2) #DO: initalize player
         self.all_sprites.add(self.player) #DO: Add player to the all_sprites group
         enemy = Enemy (100,100,"standard") #WB: Add enemy group
         self.all_sprites.add(enemy) #WB: Add enemy to the all_sprites group
@@ -380,7 +414,6 @@ class App(): #DO: Define the main application class
                 # FS: Fires projectile in front of player
                 direction = self.player.current_direction
                 # FS: Angle: right = 0, left = pi (turns out it uses radians huh)
-                import math
                 angle = 0 + random.random() - random.random() if direction == 'right' else math.pi + random.random() - random.random() #FS: Adjustable angle, some bullets can be random spread maybe??
                 velocity = 500 #FS: Adjustable velocity
                 projectile_type = 'plasma' # FS: probably will switch these values over to IDs later on
@@ -390,7 +423,6 @@ class App(): #DO: Define the main application class
                 # FS: Fires projectile in front of player
                 direction = self.player.current_direction
                 # FS: Angle: right = 0, left = pi
-                import math
                 angle = 0 if direction == 'right' else math.pi
                 velocity = 1000 # FS: adjustable velocity
                 projectile_type = 'laser' # FS: probably will switch these values over to IDs later on
@@ -400,7 +432,6 @@ class App(): #DO: Define the main application class
                 # FS: Let's try a shotgun! Fires 3 projectiles in a spread
                 direction = self.player.current_direction
                 # FS: Angle: right = 0, left = pi (turns out it uses radians huh)
-                import math
                 velocity = 500 #FS: Adjustable velocity
                 projectile_type = 'plasma' # FS: probably will switch these values over to IDs later on
                 damage_value = 10
@@ -428,9 +459,10 @@ class App(): #DO: Define the main application class
 
 
     def on_render(self): #DO: Render the display
-        self.screen.fill((50,50,100)) #DO: reset the screen to black
-        self.draw_map(self.tmx_data, self.screen,self.tile_width,self.tile_height)
-        self.all_sprites.draw(self.screen) #DO: Draw all sprites in the all_sprites group to the screen
+        #DO: likely not needed anymore self.screen.fill((50,50,100)) #DO: reset the screen to black
+        #self.draw_map(self.tmx_data, self.screen,self.tile_width,self.tile_height)
+        #self.all_sprites.draw(self.screen) #DO: Draw all sprites in the all_sprites group to the screen
+        self.camera.custom_draw(self.width, self.height, self.player, self.all_sprites, self.screen)
         pygame.display.flip() #DO: Update the full display surface to the screen
 
     
@@ -438,14 +470,29 @@ class App(): #DO: Define the main application class
     def on_cleanup(self): #DO: cleanup resources
         pygame.quit() #DO: quits pygame
         exit() #DO: kills program no matter what
+    
 
-    def draw_map(self, tmx_data, screen, tile_width, tile_height): #DO: draws a map based on given parameters using a desired map file  (as seen in the init)
+    def create_background_surface(self):
+        #DO: determines size of world from tmx file
+        map_width = self.tmx_data.width *self.tile_width
+        map_height = self.tmx_data.height *self.tile_height
+        #DO: creating a surface with the approriate dimensions of the world
+        out = pygame.Surface((map_width, map_height))
+        #DO:Call Draw map to draw on surface
+        #DO: neededd if the background is black or smth at some area out.fill((50,50,100))
+        self.draw_map(self.tmx_data,out,self.tile_width,self.tile_height)
+        return out
+
+
+
+    def draw_map(self, tmx_data, surface, tile_width, tile_height): #DO: draws a map based on given parameters using a desired map file  (as seen in the init)
+        #DO: surface or screen both should work
         for layer in tmx_data.visible_layers: #DO: For each layer in our layered map
             if isinstance(layer, pytmx.TiledTileLayer):
-                for x, y, gid in layer: #DO:
+                for x, y, gid in layer: 
                     tile = tmx_data.get_tile_image_by_gid(gid)
                     if tile: #DO: if it is a tile it blits the tile on screen
-                        screen.blit(tile, (x * tile_width, y * tile_height)) 
+                        surface.blit(tile, (x * tile_width, y * tile_height)) 
 
     def on_execute(self): #DO: Execute the application
         if not self.on_init(): #DO:initalize the application
@@ -461,7 +508,3 @@ class App(): #DO: Define the main application class
 if (__name__ == "__main__") : #DO: Run the application
     the_app = App()
     the_app.on_execute()
-
-
-
-
