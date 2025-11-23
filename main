@@ -6,7 +6,7 @@
 import pygame #DO: Import the pygame library
 from pygame.locals import * #DO: Import pygame local variables
 from sys import exit #DO: Import exit function from system (sys) module
-
+from pygame.math import Vector2 #WB: For player and enemy movement 
 import random #FS: For potential randomization of projectile/character/enemy properties
 
 class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
@@ -206,6 +206,77 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
     '''
     #FS: END OF TEST FUNCTION, IGNORE
 
+class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
+    def __init__(self, x, y, enemy_type = "standard"): #WB: Initialize the enemy class
+
+        super().__init__() #WB: Required when inherit from another class
+        if enemy_type == "standard": #WB: Standard type of enemy, the most basic one in the game
+            #WB: Define standard enemy's powers
+            self.health = 100 #WB: Define standard enemy's health
+            self.damage = 10 #WB: Define standard enemy's damage
+            
+            # WB: Create a simple placeholder image for testing
+            self.image = pygame.Surface((50, 50))
+            self.image.fill((255, 0, 0))  # Red square
+            self.rect = self.image.get_rect(center=(x, y))
+            
+            #WB: Define standard enemy's dimensions
+            self.sprite_width = 75 #WB: Define standard enemy's width 
+            self.sprite_height = 75 #WB: Define standard enemy's height
+            self.speed = 295 #WB: Define standard enemy's speed
+
+
+        elif enemy_type == "moderate": #WB: Moderate type of enemy
+            #WB: Define moderate enemy powers
+            self.health = 100 #WB: Define moderate enemy's health
+            self.damage = 30 #WB: Define moderate enemy's damage
+            self.image = pygame.image.load().convert_alpha() #WB: Load the moderate enemy's image
+            
+            #WB: Define moderate enemy's dimensions
+            self.sprite_width = 80 #WB: Define moderate enemy's width 
+            self.sprite_height = 80 #WB: Define moderate enemy's height
+            self.speed = 290 #WB: Define moderate enemy's speed
+
+        elif enemy_type == "strong": #WB: Strong type of enemy 
+            #WB: Define strong enemy's powers
+            self.health = 200 #WB: Define strong enemy's health
+            self.damage = 100 #WB: Define strong enemy's damage 
+            self.image = pygame.image.load().convert_alpha() #WB: Load the strong enemy image
+            
+            #WB: Define strong enemy's dimensions
+            self.sprite_width = 60 #WB: Define the width of the strong enemy
+            self.sprite_height = 60 #WB: Define the width of the strong enemy
+            self.speed = 295 #WB: Define the speed of the strong enemy
+    
+    def movement(self, player_rect, dt): #WB: Define enemy's movements
+        self.rect.x += self.speed * dt #WB: Makes the enemy move to the right
+
+        player_position = Vector2(player_rect.center) #WB: Direction vector for the player
+        enemy_position = Vector2(self.rect.center) #WB: Direction vector for the enemy
+
+        direction = player_position - enemy_position #WB: Creates a direciton vector towards player
+
+        distance = direction.length() #WB: Makes it that the enemy only moves if the player is within range
+        if distance > 0 and distance < 500: #WB: 500 pixels range (might change the number later)
+            direction = direction.normalize() #WB: Normalize the direction to make the length equal to 1
+        
+        
+        #WB: Moves enemy towards player
+        self.rect.x += direction.x * self.speed * dt
+        self.rect.y += direction.y * self.speed * dt
+
+            
+
+
+        
+
+            
+
+        
+               
+
+
+        
 class App(): #DO: Define the main application class
     
     def __init__(self): #DO: Initialize the application
@@ -217,6 +288,7 @@ class App(): #DO: Define the main application class
         self.size = self.width, self.height  #initalize screen size
         self.player = None #DO: Placeholder for player object
         self.all_sprites = pygame.sprite.Group() #DO: Create a sprite group to manage all sprites in the game
+        self.enemies = pygame.sprite.Group() #WB: Create a enemies group to manage all enemies in the game
         self.dt = 0 #DO: Define delta time variable
 
 
@@ -228,10 +300,13 @@ class App(): #DO: Define the main application class
         #DO: Create player object at center of screen
         self.player = Player(self.width // 2, self.height // 2)
         self.all_sprites.add(self.player) #DO: Add player to the all_sprites group
+        enemy = Enemy (100,100,"standard") #WB: Add enemy group
+        self.all_sprites.add(enemy) #WB: Add enemy to the all_sprites group
+        self.enemies.add(enemy) #WB: Add player to the enemy group
         return True
  
     def on_event(self, event): #DO: Handle events
-        if event.type == pygame.QUIT: #DO: if the user clicks the clsoe button ends program
+        if event.type == pygame.QUIT: #DO: if the user clicks the close button ends program
             self._running = False
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_e:
@@ -276,10 +351,12 @@ class App(): #DO: Define the main application class
                     self.player.projectile_anywhere(200,200,500,entry*thingythingy,projectile_type,damage_value)
                 '''
                 #FS: END OF TEST CODE, IGNORE
-
-
+    
     def on_loop(self): #DO: Main loop logic
-            self.all_sprites.update(self.dt) #DO: Update all sprites in the all_sprites group
+        for enemy in self.enemies: 
+                enemy.movement(self.player.rect, self.dt) #WB: Add movement to the enemy
+        self.all_sprites.update(self.dt) #DO: Update all sprites in the all_sprites group
+            
 
 
     def on_render(self): #DO: Render the display
@@ -288,6 +365,7 @@ class App(): #DO: Define the main application class
         self.all_sprites.draw(self.screen) #DO: Draw all sprites in the all_sprites group to the screen
         pygame.display.flip() #DO: Update the full display surface to the screen
 
+    
 
     def on_cleanup(self): #DO: cleanup resources
         pygame.quit() #DO: quits pygame
