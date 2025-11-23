@@ -114,7 +114,7 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
             if append_reverse: #DO: If a sprite sheet lacks a complete animation it will loop back to the starting animation 
                 frames += frames[::-1] #DO: Append the reversed frames excluding the last frame to create a smooth back-and-forth animation
         return frames #DO: Return the list of frames
-    def movement(self, dt):
+    def movement(self, dt, collision_rects = None):
         keys = pygame.key.get_pressed() #DO: Get the state of all keyboard buttons
 
 
@@ -165,8 +165,26 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
                dy = dy / dist * self.speed * dt
         #DO:"hitbox" created by rect attribute
         #DO: intifying from a float
-        self.rect.x += int(dx) #DO: Update the player's x position in collision logic
-        self.rect.y += int(dy) #DO: Update the player's y position in collision logic
+        #DO: Wall Collision
+        if collision_rects:
+            #DO: check X direction
+            if dx != 0:
+                self.rect.x += int(dx) #DO: intify for rect
+                for wall_rect in collision_rects: #DO: uses the returned list of collision_rects from the empty list
+                    if self.rect.colliderect(wall_rect): #DO: checks for collisions between the self (player) and the argument (walls)
+                        #DO: all collision logic sohuld have an if statement similar to that above
+                        self.rect.x -= int(dx) #DO: counteracts the normal movement of the player upon wall collision
+                        break
+            if dy != 0:
+                self.rect.y +=int(dy)
+                for wall_rect in collision_rects:
+                    if self.rect.colliderect(wall_rect):
+                        self.rect.y -= int(dy)
+                        break
+        else:
+            self.rect.x += int(dx) #DO: Update the player's x position in collision logic
+            self.rect.y += int(dy) #DO: Update the player's y position in collision logic
+        
 
     
     #DO: special collision handling for weapons, pickups, and enemies would go here
@@ -189,8 +207,8 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
     
 
     #DO: Update function to be called every frame
-    def update(self, dt):
-        self.movement(dt)
+    def update(self, dt, collision_rects = None):
+        self.movement(dt,collision_rects)
         self.animation(dt)
 
     #FS: Fire a projectile from the player
@@ -358,11 +376,12 @@ class Camera(pygame.sprite.Group):
         all_sprites - the group of sprites containing everything (in app class)
         screen - the actual screen variable (located in app)
         '''
-        self.offset.x = Player.rect.centerx - width // 2
+        self.offset.x = Player.rect.centerx - width // 2    
         self.offset.y = Player.rect.centery - height // 2
         
         #DO: drawing map
         floor_offset_pos = self.floor_rect.topleft - self.offset
+        screen.fill((0,0,0))
         screen.blit(self.background, floor_offset_pos)
 
         for sprite in all_sprites:
@@ -393,6 +412,9 @@ class App(): #DO: Define the main application class
         self.tile_width = None
         self.tile_height = None 
         self.background = None #DO: Surface for background placeholder
+        #DO: Wall variables 
+        self.walls = pygame.sprite.Group() #DO: initalizes wall sprites
+        self.collision_rects = []
 
 
     def on_init(self): #DO: Calls pygame.init()
@@ -412,6 +434,8 @@ class App(): #DO: Define the main application class
         enemy = Enemy (100,100,"standard") #WB: Add enemy group
         self.all_sprites.add(enemy) #WB: Add enemy to the all_sprites group
         self.enemies.add(enemy) #WB: Add player to the enemy group
+        #DO: Walls
+        self.load_walls() #DO: calls the load_walls function to load the layer of walls from the tmx file
         return True
  
     def on_event(self, event): #DO: Handle events
@@ -460,6 +484,12 @@ class App(): #DO: Define the main application class
                 #FS: END OF TEST CODE, IGNORE
     
     def on_loop(self): #DO: Main loop logic
+        for enemy in self.enemies: 
+            enemy.movement(self.player.rect, self.dt) #WB: Add movement to the enemy
+        self.player.update(self.dt,self.collision_rects) #DO: Player logic that makes walls work, likely will also later work with enemy collisions
+        for sprite in self.all_sprites:
+            if isinstance(sprite, Projectile): #DO: parses all sprites in all_sprites and runs the regular code for that sprite if its a projectile.
+                sprite.update(self.dt)
         for enemy in self.enemies:     
             enemy.update(self.dt, self.player.rect) #WB: Makes the enemy chase the player
         self.all_sprites.update(self.dt) #DO: Update all sprites in the all_sprites group
@@ -491,6 +521,25 @@ class App(): #DO: Define the main application class
         self.draw_map(self.tmx_data,out,self.tile_width,self.tile_height)
         return out
 
+    def load_walls(self):
+        #DO: loads objects from tilemap for collisions
+        #DO:try catch time
+        try:
+            walls_layer = None #DO: Initalize wall output
+            for layer in self.tmx_data.layers: #DO: parses layers in the file
+                if layer.name == 'Walls': #DO: if the Walls file is found it makes this layer our "layer" variable
+                    walls_layer = layer
+                    break
+            if hasattr(walls_layer, 'data'):#DO: is there anything in this layer
+                for x, y, gid in walls_layer: #DO: creates rects for collision for each wall sprite
+                    if gid != 0: #DO: gid = 0 means empty
+                        wall_rect = pygame.Rect(x*self.tile_width,y*self.tile_height,self.tile_width,self.tile_height)
+                        self.collision_rects.append(wall_rect)
+    
+        except Exception as e:
+            print(f'Error loading walls {e}')
+            #DO: if the wall layer cannot be found catches it and prints out this line
+                
 
 
     def draw_map(self, tmx_data, surface, tile_width, tile_height): #DO: draws a map based on given parameters using a desired map file  (as seen in the init)
