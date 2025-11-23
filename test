@@ -1,0 +1,36 @@
+import pytmx
+import pygame
+
+pygame.init()
+WIDTH, HEIGHT = 640, 480
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+clock = pygame.time.Clock()
+
+# --- Load TMX Map ---
+tmx_data = pytmx.load_pygame("Undead_land.tmx")
+tile_width = tmx_data.tilewidth
+tile_height = tmx_data.tileheight
+
+def draw_map():
+    for layer in tmx_data.visible_layers:
+        if isinstance(layer, pytmx.TiledTileLayer):
+            for x, y, gid in layer:
+                tile = tmx_data.get_tile_image_by_gid(gid)
+                if tile:
+                    screen.blit(tile, (x * tile_width, y * tile_height))
+
+# --- Game Loop ---
+running = True
+while running:
+    screen.fill((30, 30, 30))
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+
+    draw_map()
+
+    pygame.display.flip()
+    clock.tick(60)
+
+pygame.quit()
