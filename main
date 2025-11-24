@@ -241,7 +241,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         super().__init__() #WB: Required when inherit from another class
         if enemy_type == "standard": #WB: Standard type of enemy, the most basic one in the game
             #WB: Define standard enemy's powers
-            self.health = 100 #WB: Define standard enemy's health
+            self.health = 40 #WB: Define standard enemy's health
             self.damage = 10 #WB: Define standard enemy's damage
             
             # WB: Create a simple placeholder image for testing
@@ -252,7 +252,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #WB: Define standard enemy's dimensions
             self.sprite_width = 75 #WB: Define standard enemy's width 
             self.sprite_height = 75 #WB: Define standard enemy's height
-            self.speed = 500 #WB: Define standard enemy's speed (faster than player)
+            self.speed = 530 #WB: Define standard enemy's speed (faster than player)
             
             #WB: Defines animation properties
             self.current_frame = 0
@@ -263,7 +263,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
 
         elif enemy_type == "moderate": #WB: Moderate type of enemy
             #WB: Define moderate enemy powers
-            self.health = 100 #WB: Define moderate enemy's health
+            self.health = 60 #WB: Define moderate enemy's health
             self.damage = 30 #WB: Define moderate enemy's damage
             
              # WB: Create a simple placeholder image for testing
@@ -272,9 +272,9 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
             
             #WB: Define moderate enemy's dimensions
-            self.sprite_width = 60 #WB: Define moderate enemy's width 
+            self.sprite_width = 50 #WB: Define moderate enemy's width 
             self.sprite_height = 60 #WB: Define moderate enemy's height
-            self.speed = 520 #WB: Define moderate enemy's speed (slightly slower than player and than other enemy types)
+            self.speed = 300 #WB: Define moderate enemy's speed (slightly slower than player and than other enemy types)
             
             #WB: Defines animation properties
             self.current_frame = 0
@@ -285,13 +285,13 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
 
         elif enemy_type == "strong": #WB: Strong type of enemy 
             #WB: Define strong enemy's powers
-            self.health = 200 #WB: Define strong enemy's health
-            self.damage = 100 #WB: Define strong enemy's damage 
+            self.health = 70 #WB: Define strong enemy's health
+            self.damage = 35 #WB: Define strong enemy's damage 
             
             #WB: Define strong enemy's dimensions
             self.sprite_width = 80 #WB: Define the width of the strong enemy
             self.sprite_height = 80 #WB: Define the width of the strong enemy
-            self.speed = 550 #WB: Define the speed of the strong enemy (slightly slower than player)
+            self.speed = 250 #WB: Define the speed of the strong enemy (slightly slower than player)
            
             # WB: Create a simple placeholder image for testing
             self.image = pygame.Surface((60, 60)) #WB: I'm going to change the image later but makes the enemy a square
@@ -476,9 +476,9 @@ class App(): #DO: Define the main application class
         player_positionx = self.player.rect.centerx 
         player_positiony = self.player.rect.centery 
         self.all_sprites.add(self.player) #DO: Add player to the all_sprites group
-        enemy_1 = Enemy (player_positionx +5, player_positiony, "standard") #WB: Add standard enemy and make it start 10 pixels to the right of player
-        enemy_2 = Enemy (player_positionx, player_positiony + 20, "moderate") #WB: Add moderate enemy and make it start 20 pixels higher than the player
-        enemy_3 = Enemy (player_positionx - 30, player_positiony - 10, "strong") #WB: Add strong enemy and make it start 30 pixels to the left of the player and 10 pixels lower
+        enemy_1 = Enemy (player_positionx +5, player_positiony, "standard") #WB: Add standard enemy and make it start 5 pixels to the right of player
+        enemy_2 = Enemy (player_positionx, player_positiony + 200, "moderate") #WB: Add moderate enemy and make it start 20 pixels higher than the player
+        enemy_3 = Enemy (player_positionx - 400, player_positiony - 300, "strong") #WB: Add strong enemy and make it start 50 pixels to the left of the player and 50 pixels lower
         self.all_sprites.add(enemy_1, enemy_2, enemy_3) #WB: Add enemy to the all_sprites group
         self.enemies.add(enemy_1, enemy_2,enemy_3) #WB: Add player to the enemy group
         #DO: Walls
@@ -539,13 +539,26 @@ class App(): #DO: Define the main application class
         for enemy in self.enemies:   
             enemy.update(self.dt, self.player.rect) #WB: Makes the enemy chase the player
         
+        #Checks for player-enemy collisions
+        for enemy in self.enemies:
+                if isinstance (enemy, Enemy): #WB: Handles the case where the enemy hits the player
+                    if enemy.rect.colliderect(self.player.rect): 
+                        self.player.health -= enemy.damage #WB: When the player is hit by an enemy it loses health points
+                        print("Player hit!")
+                    
+                    #WB: Checks if player is dead
+                    if self.player.health <= 0: 
+                        self.player.kill()
+                        print("Player killed!")
+
+                        
         #Checks for projectile-enemy collisions
         for enemy in self.enemies:
             for projectile in self.all_sprites:
                 if isinstance(projectile, Projectile): #WB: Handles the case where the enemy is hit by a projectile
                     if enemy.rect.colliderect(projectile.rect):
                         enemy.health -= projectile.damage_value #WB: When the enemy is hit by a projectile, it loses health points
-                    print(f"Enemy hit! Health: {enemy.health}")  
+                        print(f"Enemy hit! Health: {enemy.health}")  
 
                     #WB: Checks if enemy is dead
                     if enemy.health <= 0:
