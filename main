@@ -508,16 +508,19 @@ class App(): #DO: Define the main application class
                 #FS: END OF TEST CODE, IGNORE
     
     def on_loop(self): #DO: Main loop logic
-        for enemy in self.enemies: 
-            enemy.movement(self.player.rect, self.dt) #WB: Add movement to the enemy
+        
         self.player.update(self.dt,self.collision_rects) #DO: Player logic that makes walls work, likely will also later work with enemy collisions
         for sprite in self.all_sprites:
             if isinstance(sprite, Projectile): #DO: parses all sprites in all_sprites and runs the regular code for that sprite if its a projectile.
                 sprite.update(self.dt)
-        for enemy in self.enemies:     
+        for enemy in self.enemies:   
             enemy.update(self.dt, self.player.rect) #WB: Makes the enemy chase the player
-        self.all_sprites.update(self.dt) #DO: Update all sprites in the all_sprites group
-            
+        
+        #WB: Checks for projectile-enemy collisions
+        #for enemy in self.enemies:
+            #for projectile in self.all_sprites:
+                #if isinstance(projectile, Projectile):
+
 
 
     def on_render(self): #DO: Render the display
