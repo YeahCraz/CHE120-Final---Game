@@ -337,7 +337,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
             self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
 
-        else: 
+        #else: 
             
 
 
@@ -564,7 +564,7 @@ def load_walls(self):
             #DO: if the wall layer cannot be found catches it and prints out this line
 
 
-    def draw_map(self, tmx_data, surface, tile_width, tile_height): #DO: draws a map based on given parameters using a desired map file  (as seen in the init)
+def draw_map(self, tmx_data, surface, tile_width, tile_height): #DO: draws a map based on given parameters using a desired map file  (as seen in the init)
         #DO: surface or screen both should work
         for layer in tmx_data.visible_layers: #DO: For each layer in our layered map
             if isinstance(layer, pytmx.TiledTileLayer):
@@ -573,7 +573,7 @@ def load_walls(self):
                     if tile: #DO: if it is a tile it blits the tile on screen
                         surface.blit(tile, (x * tile_width, y * tile_height)) 
 
-    def on_execute(self): #DO: Execute the application
+def on_execute(self): #DO: Execute the application
         if not self.on_init(): #DO:initalize the application
             self._running = False
  
