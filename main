@@ -328,12 +328,20 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         else:
             self.current_direction = "right"
 
+<<<<<<< Updated upstream
         self.moving = (distance > 0)  #WB: Makes the enemy always move even when the player isn't moving
     
         if distance > 0:  #WB: The enemy will always chase the player as long as it is not on top of the player
             direction = direction.normalize()  #WB: Noramlizwe the direction to make the length equal to 1 so that the enemy's speed stays constant
             self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
             self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
+=======
+        
+        direction = direction.normalize() #WB: Normalize the direction to make the length equal to 1
+        #WB: Moves enemy towards player
+        self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
+        self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
+>>>>>>> Stashed changes
 
             
 
