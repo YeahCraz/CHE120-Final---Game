@@ -252,7 +252,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #WB: Define standard enemy's dimensions
             self.sprite_width = 75 #WB: Define standard enemy's width 
             self.sprite_height = 75 #WB: Define standard enemy's height
-            self.speed = 530 #WB: Define standard enemy's speed (faster than player)
+            self.speed = 250 #WB: Define standard enemy's speed (faster than player)
             
             #WB: Defines animation properties
             self.current_frame = 0
@@ -274,7 +274,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #WB: Define moderate enemy's dimensions
             self.sprite_width = 50 #WB: Define moderate enemy's width 
             self.sprite_height = 60 #WB: Define moderate enemy's height
-            self.speed = 300 #WB: Define moderate enemy's speed (slightly slower than player and than other enemy types)
+            self.speed = 220 #WB: Define moderate enemy's speed (slightly slower than player and than other enemy types)
             
             #WB: Defines animation properties
             self.current_frame = 0
@@ -291,7 +291,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #WB: Define strong enemy's dimensions
             self.sprite_width = 80 #WB: Define the width of the strong enemy
             self.sprite_height = 80 #WB: Define the width of the strong enemy
-            self.speed = 250 #WB: Define the speed of the strong enemy (slightly slower than player)
+            self.speed = 200 #WB: Define the speed of the strong enemy (slightly slower than player)
            
             # WB: Create a simple placeholder image for testing
             self.image = pygame.Surface((60, 60)) #WB: I'm going to change the image later but makes the enemy a square
@@ -335,7 +335,6 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
             self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
 
-        #else: 
             
 
 
@@ -476,9 +475,9 @@ class App(): #DO: Define the main application class
         player_positionx = self.player.rect.centerx 
         player_positiony = self.player.rect.centery 
         self.all_sprites.add(self.player) #DO: Add player to the all_sprites group
-        enemy_1 = Enemy (player_positionx +5, player_positiony, "standard") #WB: Add standard enemy and make it start 5 pixels to the right of player
-        enemy_2 = Enemy (player_positionx, player_positiony + 200, "moderate") #WB: Add moderate enemy and make it start 20 pixels higher than the player
-        enemy_3 = Enemy (player_positionx - 400, player_positiony - 300, "strong") #WB: Add strong enemy and make it start 50 pixels to the left of the player and 50 pixels lower
+        enemy_1 = Enemy (player_positionx +1000, player_positiony, "standard") #WB: Add standard enemy and make it start 5 pixels to the right of player
+        enemy_2 = Enemy (player_positionx, player_positiony + 2000, "moderate") #WB: Add moderate enemy and make it start 200 pixels higher than the player
+        enemy_3 = Enemy (player_positionx - 4000, player_positiony - 3000, "strong") #WB: Add strong enemy and make it start 400 pixels to the left of the player and 300 pixels lower
         self.all_sprites.add(enemy_1, enemy_2, enemy_3) #WB: Add enemy to the all_sprites group
         self.enemies.add(enemy_1, enemy_2,enemy_3) #WB: Add player to the enemy group
         #DO: Walls
@@ -550,6 +549,7 @@ class App(): #DO: Define the main application class
                     if self.player.health <= 0: 
                         self.player.kill()
                         print("Player killed!")
+
 
                         
         #Checks for projectile-enemy collisions
