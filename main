@@ -67,6 +67,10 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         self.walk_sheet = pygame.image.load('Ronin\Ronin\spr_RoninRun_strip.png').convert_alpha() #DO: Load the sprite sheet image
         self.idle_sheet = pygame.image.load('Ronin\Ronin\spr_RoninIdle_strip.png').convert_alpha() #DO: Load the idle sprite sheet image
 
+        #WB: Define player's health
+        self.health = 100 #WB: Player starting health
+        self.max_health = 100 #WB: Player's maximum health
+
         #DO: Define sprite dimensions
         self.sprite_width = 65 #DO: Define the width of a single sprite
         self.sprite_height = 65 #DO: Define the height of a single sprite
@@ -185,6 +189,8 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
             self.rect.x += int(dx) #DO: Update the player's x position in collision logic
             self.rect.y += int(dy) #DO: Update the player's y position in collision logic
         
+        self.rect.x += int(dx) #DO: Update the player's x position in collision logic
+        self.rect.y += int(dy) #DO: Update the player's y position in collision logic
 
     
     #DO: special collision handling for weapons, pickups, and enemies would go here
@@ -301,17 +307,17 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.current_direction = 'right'  #WB: Based on player's position
             self.moving = False
         
-
+        #WB: ADD SPRITE SHEET LATER
         #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
         #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
-        self.walk_frames = {
-        "left": self.load_frames(walk_sheet, 0, 0, num_frames, True), #WB: Loads animation for walking left
-        "right": self.load_frames(walk_sheet, 0, 0, num_frames, False) #WB: Loads animation for walking right 
-        }
-        self.idle_frames = {
-        "left": self.load_frames(idle_sheet, 0, 0, num_frames, True), #WB: Loads animation for idle left
-        "right": self.load_frames(idle_sheet, 0, 0, num_frames, False) #WB: Loads animation for idle right
-        }
+        #self.walk_frames = {
+        #"left": self.load_frames(walk_sheet, 0, 0, num_frames, True), #WB: Loads animation for walking left
+        #"right": self.load_frames(walk_sheet, 0, 0, num_frames, False) #WB: Loads animation for walking right 
+        #}
+        #self.idle_frames = {
+        #"left": self.load_frames(idle_sheet, 0, 0, num_frames, True), #WB: Loads animation for idle left
+        #"right": self.load_frames(idle_sheet, 0, 0, num_frames, False) #WB: Loads animation for idle right
+        #}
 
     def movement(self, player_rect, dt): #WB: Define enemy's movements
         player_position = Vector2(player_rect.center) #WB: Direction vector for the player
@@ -324,11 +330,16 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         else:
             self.current_direction = "right"
 
-        if distance > 0 and distance < 800: #WB: 800 pixels range (might change the number later)
-            direction = direction.normalize() #WB: Normalize the direction to make the length equal to 1
-            #WB: Moves enemy towards player
+        self.moving = (distance > 0)  #WB: Makes the enemy always move even when the player isn't moving
+    
+        if distance > 0:  #WB: The enemy will always chase the player as long as it is not on top of the player
+            direction = direction.normalize()  #WB: Noramlizwe the direction to make the length equal to 1
             self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
             self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
+
+        else: 
+            
+
 
 
     
@@ -361,6 +372,19 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         return projectile
 
 
+            
+
+
+        
+
+            
+
+        
+               
+
+
+        
+
 class Camera(pygame.sprite.Group):
     def __init__(self,background):
         super().__init__()
@@ -376,7 +400,7 @@ class Camera(pygame.sprite.Group):
         all_sprites - the group of sprites containing everything (in app class)
         screen - the actual screen variable (located in app)
         '''
-        self.offset.x = Player.rect.centerx - width // 2    
+        self.offset.x = Player.rect.centerx - width // 2
         self.offset.y = Player.rect.centery - height // 2
         
         #DO: drawing map
@@ -520,8 +544,7 @@ class App(): #DO: Define the main application class
         #DO: neededd if the background is black or smth at some area out.fill((50,50,100))
         self.draw_map(self.tmx_data,out,self.tile_width,self.tile_height)
         return out
-
-    def load_walls(self):
+def load_walls(self):
         #DO: loads objects from tilemap for collisions
         #DO:try catch time
         try:
@@ -539,7 +562,6 @@ class App(): #DO: Define the main application class
         except Exception as e:
             print(f'Error loading walls {e}')
             #DO: if the wall layer cannot be found catches it and prints out this line
-                
 
 
     def draw_map(self, tmx_data, surface, tile_width, tile_height): #DO: draws a map based on given parameters using a desired map file  (as seen in the init)
