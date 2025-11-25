@@ -304,6 +304,28 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.animation_timer = 0.0
             self.current_direction = 'right'  #WB: Based on player's position
             self.moving = False
+
+        elif enemy_type == "shooting": #WB: Shooting type of enemy 
+            #WB: Define shooting enemy's powers
+            self.health = 80 #WB: Define shooting enemy's health
+            self.damage = 10 #WB: Define shooting enemy's damage 
+            
+            #WB: Define strong enemy's dimensions
+            self.sprite_width = 20 #WB: Define the width of the shooting enemy
+            self.sprite_height = 20 #WB: Define the width of the shooting enemy
+            self.speed = 150 #WB: Define the speed of the shooting enemy (slower than player)
+           
+            # WB: Create a simple placeholder image for testing
+            self.image = pygame.Surface((60, 60)) #WB: I'm going to change the image later but makes the enemy a square
+            self.image.fill((255, 0, 255))  #WB: Makes the enemy look like a purple square
+            self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
+            
+            #WB: Defines animation properties
+            self.current_frame = 0
+            self.animation_speed = 0.1 
+            self.animation_timer = 0.0
+            self.current_direction = 'right'  #WB: Based on player's position
+            self.moving = False
         
         #WB: ADD SPRITE SHEET LATER
         #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
@@ -328,20 +350,13 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         else:
             self.current_direction = "right"
 
-<<<<<<< Updated upstream
         self.moving = (distance > 0)  #WB: Makes the enemy always move even when the player isn't moving
     
         if distance > 0:  #WB: The enemy will always chase the player as long as it is not on top of the player
             direction = direction.normalize()  #WB: Noramlizwe the direction to make the length equal to 1 so that the enemy's speed stays constant
             self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
             self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
-=======
         
-        direction = direction.normalize() #WB: Normalize the direction to make the length equal to 1
-        #WB: Moves enemy towards player
-        self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
-        self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
->>>>>>> Stashed changes
 
             
 
@@ -389,13 +404,16 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         self.movement(player_rect, dt) #WB: Updates the enemy's movements
         self.enemy_animations(dt) #WB: Calls the animation method
         
-        #WB: Fire a projectile from the enemy
-    def enemy_projectile(self, velocity, angle, projectile_type, damage_value):
-        projectile = Projectile(self.rect.centerx, self.rect.centery, velocity, angle, projectile_type, id(self), damage_value)
+        #WB: Fire a projectile from the shooting enemy
+    #def enemy_projectile(enemy_type, self, velocity, direction, projectile_type, damage_value):
+        #angle = math.atan2(direction.y, direction.x) #WB: Turns direction vectors into angles
+        #if enemy_type == "shooting":
+            
+        #projectile = Projectile(self.rect.centerx, self.rect.centery, velocity, angle, projectile_type, id(self), damage_value)
         #WB: Add projectile to the same group as enemy 
-        for group in self.groups():
-            group.add(projectile)
-        return projectile
+        #for group in self.groups():
+            #group.add(projectile)
+        #return projectile
 
 
             
