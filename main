@@ -60,6 +60,11 @@ class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
 class Player(pygame.sprite.Sprite): #DO: Define a player class
     def __init__(self,x,y): #DO: initialize the player class
         super().__init__() #DO: Required when inheriting from another class
+        #DO: invincibility logic
+        self.invincible = False
+        self.invincible_timer = 0.
+        self.invincible_duration = 0.5
+
         #DO: turn x and y into float if not already
         self.x = float(x)
         self.y = float(y)
@@ -188,12 +193,20 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         else:
             self.rect.x += int(dx) #DO: Update the player's x position in collision logic
             self.rect.y += int(dy) #DO: Update the player's y position in collision logic
-        
-        self.rect.x += int(dx) #DO: Update the player's x position in collision logic
-        self.rect.y += int(dy) #DO: Update the player's y position in collision logic
-
     
     #DO: special collision handling for weapons, pickups, and enemies would go here
+    def begin_invincibility(self, duration = None):
+        self.invincible = True
+        if duration != None:
+            self.invincible_timer = duration
+        else:
+            self.invincible_timer = self.invincible_duration
+    def update_invinciblity(self,dt):
+        if self.invincible:
+            self.invincible_timer -=dt
+        if self.invincible_timer <= 0:
+            self.invincible_timer = 0.
+            self.invincible = False
 
     
     #DO: handles animation based on movement
@@ -216,6 +229,7 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
     def update(self, dt, collision_rects = None):
         self.movement(dt,collision_rects)
         self.animation(dt)
+        self.update_invinciblity(dt)
 
     #FS: Fire a projectile from the player
     def player_projectile(self, velocity, angle, projectile_type, damage_value):
@@ -242,7 +256,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         if enemy_type == "standard": #WB: Standard type of enemy, the most basic one in the game
             #WB: Define standard enemy's powers
             self.health = 40 #WB: Define standard enemy's health
-            self.damage = 10 #WB: Define standard enemy's damage
+            self.damage = 1 #WB: Define standard enemy's damage
             
             # WB: Create a simple placeholder image for testing
             self.image = pygame.Surface((50, 50)) #WB: Makes the enemy look like a square
@@ -354,9 +368,12 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
     
         if distance > 0:  #WB: The enemy will always chase the player as long as it is not on top of the player
             direction = direction.normalize()  #WB: Noramlizwe the direction to make the length equal to 1 so that the enemy's speed stays constant
-            self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
+            self.rect.x += direction.x * self.speed * dt #wWB: Moves enemy left and right
             self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
+<<<<<<< HEAD
         
+=======
+>>>>>>> d964e5e937e18831a7c7ed80a6df3f00b73b2a6f
 
             
 
@@ -415,20 +432,6 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #group.add(projectile)
         #return projectile
 
-
-            
-
-
-        
-
-            
-
-        
-               
-
-
-        
-
 class Camera(pygame.sprite.Group):
     def __init__(self,background):
         super().__init__()
@@ -455,8 +458,6 @@ class Camera(pygame.sprite.Group):
         for sprite in all_sprites:
             offset_pos = sprite.rect.topleft - self.offset
             screen.blit(sprite.image,offset_pos)
-        
-
 
 
 class App(): #DO: Define the main application class
@@ -567,14 +568,17 @@ class App(): #DO: Define the main application class
         #Checks for player-enemy collisions
         for enemy in self.enemies:
                 if isinstance (enemy, Enemy): #WB: Handles the case where the enemy hits the player
-                    if enemy.rect.colliderect(self.player.rect): 
+                    if enemy.rect.colliderect(self.player.rect) and not self.player.invincible: #DO: Player has not been hit in the last half a second
                         self.player.health -= enemy.damage #WB: When the player is hit by an enemy it loses health points
-                        print("Player hit!")
+                        self.player.begin_invincibility() #DO: starts recovery frames
+                        print(f"Player hit! at {pygame.time.get_ticks()}")
+                        break #DO: exit the for loop upon hit
                     
                     #WB: Checks if player is dead
                     if self.player.health <= 0: 
                         self.player.kill()
                         print("Player killed!")
+                        break  #DO: exit the for loop upon death
 
 
                         
@@ -585,6 +589,7 @@ class App(): #DO: Define the main application class
                     if enemy.rect.colliderect(projectile.rect):
                         enemy.health -= projectile.damage_value #WB: When the enemy is hit by a projectile, it loses health points
                         print(f"Enemy hit! Health: {enemy.health}")  
+                        projectile.kill()
 
                     #WB: Checks if enemy is dead
                     if enemy.health <= 0:
