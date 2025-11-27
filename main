@@ -193,6 +193,11 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         else:
             self.rect.x += int(dx) #DO: Update the player's x position in collision logic
             self.rect.y += int(dy) #DO: Update the player's y position in collision logic
+<<<<<<< Updated upstream
+=======
+        
+
+>>>>>>> Stashed changes
     
     #DO: special collision handling for weapons, pickups, and enemies would go here
     def begin_invincibility(self, duration = None):
@@ -418,7 +423,7 @@ class Camera(pygame.sprite.Group):
         all_sprites - the group of sprites containing everything (in app class)
         screen - the actual screen variable (located in app)
         '''
-        self.offset.x = Player.rect.centerx - width // 2
+        self.offset.x = Player.rect.centerx - width // 2    
         self.offset.y = Player.rect.centery - height // 2
         
         #DO: drawing map
@@ -473,11 +478,17 @@ class App(): #DO: Define the main application class
         player_positionx = self.player.rect.centerx 
         player_positiony = self.player.rect.centery 
         self.all_sprites.add(self.player) #DO: Add player to the all_sprites group
+<<<<<<< Updated upstream
         enemy_1 = Enemy (player_positionx +1000, player_positiony, "standard") #WB: Add standard enemy and make it start 5 pixels to the right of player
         enemy_2 = Enemy (player_positionx, player_positiony + 2000, "moderate") #WB: Add moderate enemy and make it start 200 pixels higher than the player
         enemy_3 = Enemy (player_positionx - 4000, player_positiony - 3000, "strong") #WB: Add strong enemy and make it start 400 pixels to the left of the player and 300 pixels lower
         self.all_sprites.add(enemy_1, enemy_2, enemy_3) #WB: Add enemy to the all_sprites group
         self.enemies.add(enemy_1, enemy_2,enemy_3) #WB: Add player to the enemy group
+=======
+        enemy = Enemy (100,100,"standard") #WB: Add enemy group
+        self.all_sprites.add(enemy) #WB: Add enemy to the all_sprites group
+        self.enemies.add(enemy) #WB: Add player to the enemy group
+>>>>>>> Stashed changes
         #DO: Walls
         self.load_walls() #DO: calls the load_walls function to load the layer of walls from the tmx file
         return True
@@ -528,11 +539,17 @@ class App(): #DO: Define the main application class
                 #FS: END OF TEST CODE, IGNORE
     
     def on_loop(self): #DO: Main loop logic
+<<<<<<< Updated upstream
         
+=======
+        for enemy in self.enemies: 
+            enemy.movement(self.player.rect, self.dt) #WB: Add movement to the enemy
+>>>>>>> Stashed changes
         self.player.update(self.dt,self.collision_rects) #DO: Player logic that makes walls work, likely will also later work with enemy collisions
         for sprite in self.all_sprites:
             if isinstance(sprite, Projectile): #DO: parses all sprites in all_sprites and runs the regular code for that sprite if its a projectile.
                 sprite.update(self.dt)
+<<<<<<< Updated upstream
         for enemy in self.enemies:   
             enemy.update(self.dt, self.player.rect) #WB: Makes the enemy chase the player
         
@@ -568,6 +585,9 @@ class App(): #DO: Define the main application class
                         print("Enemy defeated!")
         
 
+=======
+            
+>>>>>>> Stashed changes
 
 
     def on_render(self): #DO: Render the display
@@ -594,6 +614,10 @@ class App(): #DO: Define the main application class
         #DO: neededd if the background is black or smth at some area out.fill((50,50,100))
         self.draw_map(self.tmx_data,out,self.tile_width,self.tile_height)
         return out
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
     def load_walls(self):
         #DO: loads objects from tilemap for collisions
         #DO:try catch time
@@ -612,6 +636,10 @@ class App(): #DO: Define the main application class
         except Exception as e:
             print(f'Error loading walls {e}')
             #DO: if the wall layer cannot be found catches it and prints out this line
+<<<<<<< Updated upstream
+=======
+                
+>>>>>>> Stashed changes
 
 
     def draw_map(self, tmx_data, surface, tile_width, tile_height): #DO: draws a map based on given parameters using a desired map file  (as seen in the init)
