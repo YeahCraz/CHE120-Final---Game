@@ -193,11 +193,6 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         else:
             self.rect.x += int(dx) #DO: Update the player's x position in collision logic
             self.rect.y += int(dy) #DO: Update the player's y position in collision logic
-<<<<<<< Updated upstream
-=======
-        
-
->>>>>>> Stashed changes
     
     #DO: special collision handling for weapons, pickups, and enemies would go here
     def begin_invincibility(self, duration = None):
@@ -373,12 +368,9 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
     
         if distance > 0:  #WB: The enemy will always chase the player as long as it is not on top of the player
             direction = direction.normalize()  #WB: Noramlizwe the direction to make the length equal to 1 so that the enemy's speed stays constant
-            self.rect.x += direction.x * self.speed * dt #wWB: Moves enemy left and right
+            self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
             self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
-<<<<<<< HEAD
         
-=======
->>>>>>> d964e5e937e18831a7c7ed80a6df3f00b73b2a6f
 
             
 
@@ -452,7 +444,7 @@ class Camera(pygame.sprite.Group):
         all_sprites - the group of sprites containing everything (in app class)
         screen - the actual screen variable (located in app)
         '''
-        self.offset.x = Player.rect.centerx - width // 2    
+        self.offset.x = Player.rect.centerx - width // 2
         self.offset.y = Player.rect.centery - height // 2
         
         #DO: drawing map
@@ -507,17 +499,11 @@ class App(): #DO: Define the main application class
         player_positionx = self.player.rect.centerx 
         player_positiony = self.player.rect.centery 
         self.all_sprites.add(self.player) #DO: Add player to the all_sprites group
-<<<<<<< Updated upstream
         enemy_1 = Enemy (player_positionx +1000, player_positiony, "standard") #WB: Add standard enemy and make it start 5 pixels to the right of player
         enemy_2 = Enemy (player_positionx, player_positiony + 2000, "moderate") #WB: Add moderate enemy and make it start 200 pixels higher than the player
         enemy_3 = Enemy (player_positionx - 4000, player_positiony - 3000, "strong") #WB: Add strong enemy and make it start 400 pixels to the left of the player and 300 pixels lower
         self.all_sprites.add(enemy_1, enemy_2, enemy_3) #WB: Add enemy to the all_sprites group
         self.enemies.add(enemy_1, enemy_2,enemy_3) #WB: Add player to the enemy group
-=======
-        enemy = Enemy (100,100,"standard") #WB: Add enemy group
-        self.all_sprites.add(enemy) #WB: Add enemy to the all_sprites group
-        self.enemies.add(enemy) #WB: Add player to the enemy group
->>>>>>> Stashed changes
         #DO: Walls
         self.load_walls() #DO: calls the load_walls function to load the layer of walls from the tmx file
         return True
@@ -567,18 +553,35 @@ class App(): #DO: Define the main application class
                 '''
                 #FS: END OF TEST CODE, IGNORE
     
-    def on_loop(self): #DO: Main loop logic
-<<<<<<< Updated upstream
+    def on_spawn(self,dt): #WB: Makes the enemies spawn in the game 
         
-=======
-        for enemy in self.enemies: 
-            enemy.movement(self.player.rect, self.dt) #WB: Add movement to the enemy
->>>>>>> Stashed changes
+        player_x = self.player.rect.centerx #WB: Gets the player's x position first as the position of the enemy always depends on the player's
+        player_y = self.player.rect.centery #WB: Gets the player's y position first as the position of the enemy always depends on the player's
+
+        x = random.randint (player_x - 500, player_x + 500) #WB: Makes it so that the enemy can randomly spawn from anywhere between 500 pixels to the right or to the left of the player
+        y = random.randint (player_y - 500, player_y + 500) #WB: Makes it so that the enemy can randomly spawn from anywhere between 500 pixels up or down from the player
+        
+        if len(self.enemies) < 3: #WB: There is always a fixed number of 3 enemies in the game. If the number is lower than 3, it adds more enemies so that the number stays 3.
+            chance = random.random() #WB: Randomly selects the enemy to add to the game based on probability     
+            #WB: Each enemy has a likely or less likely chance to appear on screen
+            if chance < 0.6:          #WB: Standard enemies have a more likely chance to appear on screen (60%)
+                    enemy_type = "standard"
+            elif chance < 0.85:       #WB: Moderate enemies have a 25% chance to appear 
+                    enemy_type = "moderate"
+            else:
+                enemy_type = "strong" #WB: Strong enemies have a 15% chance to appear as they are harder to kill
+
+            new_enemy = Enemy(x, y, enemy_type) #WB: Creates a variable to add the new enemy
+            self.enemies.add(new_enemy) #WB: Adds the new enemy to the enemies group
+            self.all_sprites.add(new_enemy) #WB: Adds the new enemy to the all sprites group
+
+        
+    def on_loop(self): #DO: Main loop logic
+        
         self.player.update(self.dt,self.collision_rects) #DO: Player logic that makes walls work, likely will also later work with enemy collisions
         for sprite in self.all_sprites:
             if isinstance(sprite, Projectile): #DO: parses all sprites in all_sprites and runs the regular code for that sprite if its a projectile.
                 sprite.update(self.dt)
-<<<<<<< Updated upstream
         for enemy in self.enemies:   
             enemy.update(self.dt, self.player.rect) #WB: Makes the enemy chase the player
         
@@ -593,7 +596,7 @@ class App(): #DO: Define the main application class
                     
                     #WB: Checks if player is dead
                     if self.player.health <= 0: 
-                        self.player.kill()
+                        self.player.kill() #WB: Removes the player from the game
                         print("Player killed!")
                         break  #DO: exit the for loop upon death
 
@@ -614,9 +617,6 @@ class App(): #DO: Define the main application class
                         print("Enemy defeated!")
         
 
-=======
-            
->>>>>>> Stashed changes
 
 
     def on_render(self): #DO: Render the display
@@ -643,10 +643,6 @@ class App(): #DO: Define the main application class
         #DO: neededd if the background is black or smth at some area out.fill((50,50,100))
         self.draw_map(self.tmx_data,out,self.tile_width,self.tile_height)
         return out
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
     def load_walls(self):
         #DO: loads objects from tilemap for collisions
         #DO:try catch time
@@ -665,10 +661,6 @@ class App(): #DO: Define the main application class
         except Exception as e:
             print(f'Error loading walls {e}')
             #DO: if the wall layer cannot be found catches it and prints out this line
-<<<<<<< Updated upstream
-=======
-                
->>>>>>> Stashed changes
 
 
     def draw_map(self, tmx_data, surface, tile_width, tile_height): #DO: draws a map based on given parameters using a desired map file  (as seen in the init)
