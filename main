@@ -251,8 +251,8 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
 
 class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
     def __init__(self, x, y, enemy_type = "standard"): #WB: Initialize the enemy class
-
         super().__init__() #WB: Required when inherit from another class
+        self.enemy_type = enemy_type #WB: Set a variable so that the enemy_type can be called in other methods
         if enemy_type == "standard": #WB: Standard type of enemy, the most basic one in the game
             #WB: Define standard enemy's powers
             self.health = 40 #WB: Define standard enemy's health
@@ -262,18 +262,16 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #self.image = pygame.Surface((50, 50)) #WB: Makes the enemy look like a square
             #self.image.fill((255, 0, 0))  #WB: Makes the enemy look like a red square
             #self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
-            
+           
+
             #WB: Define standard enemy's dimensions
             self.sprite_width = 75 #WB: Define standard enemy's width 
             self.sprite_height = 75 #WB: Define standard enemy's height
             self.speed = 200 #WB: Define standard enemy's speed (slower than player)
+            #WB: Loading sprite sheet, it can viewed in ""
+            self.walk_sheet = pygame.image.load('C:\Users\winni\Desktop\Game\enemy-spritesheet-1.png').convert_alpha() #WB: Load the sprite sheet image
+            self.idle_sheet = pygame.image.load('C:\Users\winni\Desktop\Game\enemy-spritesheet-1.png').convert_alpha() #WB: Load the idle sprite sheet image
             
-            #WB: Defines animation properties
-            self.current_frame = 0
-            self.animation_speed = 0.01 #WB: Enemy animation slightly faster than player
-            self.animation_timer = 0.0
-            self.current_direction = 'right'  #WB: Based on player's position
-            self.moving = False
 
         elif enemy_type == "moderate": #WB: Moderate type of enemy
             #WB: Define moderate enemy powers
@@ -284,40 +282,36 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #self.image = pygame.Surface((50, 20)) #WB: Makes the enemy a rectangle
             #self.image.fill((0, 255, 0))  #WB: Makes the enemy look like a green rectangle
             #self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
-            
+
             #WB: Define moderate enemy's dimensions
             self.sprite_width = 50 #WB: Define moderate enemy's width 
             self.sprite_height = 60 #WB: Define moderate enemy's height
             self.speed = 210 #WB: Define moderate enemy's speed (slower than player but faster than standard)
+            #WB: loading sprite sheet, it can viewed in "neo_zero_V1.0____Credit_YaninYunus"
+            self.walk_sheet = pygame.image.load('C:\Users\winni\Desktop\Game\enemy-removebg-preview.png').convert_alpha() #DO: Load the sprite sheet image
+            self.idle_sheet = pygame.image.load('C:\Users\winni\Desktop\Game\enemy-removebg-preview.png').convert_alpha() #DO: Load the idle sprite sheet image
             
-            #WB: Defines animation properties
-            self.current_frame = 0
-            self.animation_speed = 0.15 #WB: Enemy animation slightly slower than player
-            self.animation_timer = 0.0
-            self.current_direction = 'right'  #WB: Based on player's position
-            self.moving = False
 
         elif enemy_type == "strong": #WB: Strong type of enemy 
             #WB: Define strong enemy's powers
             self.health = 70 #WB: Define strong enemy's health
             self.damage = 35 #WB: Define strong enemy's damage 
             
+
             #WB: Define strong enemy's dimensions
             self.sprite_width = 80 #WB: Define the width of the strong enemy
             self.sprite_height = 80 #WB: Define the width of the strong enemy
             self.speed = 200 #WB: Define the speed of the strong enemy (slightly slower than player)
+            #WB: loading sprite sheet, it can viewed in ""
+            self.walk_sheet = pygame.image.load('C:\Users\winni\Desktop\Game\reaper_1-removebg-preview.png').convert_alpha() #DO: Load the sprite sheet image
+            self.idle_sheet = pygame.image.load('C:\Users\winni\Desktop\Game\reaper_1-removebg-preview.png').convert_alpha() #DO: Load the idle sprite sheet image
            
             # WB: Create a simple placeholder image for testing
             #self.image = pygame.Surface((60, 60)) #WB: I'm going to change the image later but makes the enemy a square
             #self.image.fill((0, 0, 255))  #WB: Makes the enemy look like a blue square
             #self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
             
-            #WB: Defines animation properties
-            self.current_frame = 0
-            self.animation_speed = 0.1 
-            self.animation_timer = 0.0
-            self.current_direction = 'right'  #WB: Based on player's position
-            self.moving = False
+        
 
         elif enemy_type == "shooting": #WB: Shooting type of enemy 
             #WB: Define shooting enemy's powers
@@ -326,6 +320,9 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.last_shot_time = pygame.time.get_ticks() #WB: Tracks the time 
             self.shooting_cooldown = 2000 #WB: Sets the cooldown time to 2 seconds. The enemy shoots every 2 seconds
             
+            self.walk_sheet = pygame.image.load('C:\Users\winni\Desktop\Game\marcaucoin_picture.png').convert_alpha() #WB: Load the sprite sheet image
+            self.idle_sheet = pygame.image.load('C:\Users\winni\Desktop\Game\marcaucoin_picture.png').convert_alpha() #WB: Load the idle sprite sheet image
+
             #WB: Define strong enemy's dimensions
             self.sprite_width = 20 #WB: Define the width of the shooting enemy
             self.sprite_height = 20 #WB: Define the width of the shooting enemy
@@ -336,45 +333,13 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #self.image.fill((255, 0, 255))  #WB: Makes the enemy look like a purple square
             #self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
             
-            #WB: Defines animation properties
-            self.current_frame = 0
-            self.animation_speed = 0.1 
-            self.animation_timer = 0.0
-            self.current_direction = 'right'  #WB: Based on player's position
-            self.moving = False
+        #WB: Defines animation properties
+        self.current_frame = 0
+        self.animation_speed = 0.1 
+        self.animation_timer = 0.0
+        self.current_direction = 'right'  #WB: Based on player's position
+        self.moving = False
         
-        self.enemy_type = enemy_type #WB: Set a variable so that the enemy_type can be called in other methods
-        
-        if enemy_type == "standard":
-            #WB: Loading sprite sheet, it can viewed in ""
-            self.walk_sheet = pygame.image.load('enemy-spritesheet-1.png').convert_alpha() #WB: Load the sprite sheet image
-            self.idle_sheet = pygame.image.load('enemy-spritesheet-1.png').convert_alpha() #WB: Load the idle sprite sheet image
-        
-        elif enemy_type == "moderate":
-            #WB: loading sprite sheet, it can viewed in "neo_zero_V1.0____Credit_YaninYunus"
-            self.walk_sheet = pygame.image.load('enemy-removebg-preview.png').convert_alpha() #DO: Load the sprite sheet image
-            self.idle_sheet = pygame.image.load('enemy-removebg-preview.png').convert_alpha() #DO: Load the idle sprite sheet image
-        elif enemy_type == "strong":
-            #DO: loading sprite sheet, it can viewed in "neo_zero_V1.0____Credit_YaninYunus"
-            self.walk_sheet = pygame.image.load('reaper_1-removebg-preview.png').convert_alpha() #DO: Load the sprite sheet image
-            self.idle_sheet = pygame.image.load('reaper_1-removebg-preview.png').convert_alpha() #DO: Load the idle sprite sheet image
-        elif enemy_type == "shooting":
-            #WB: Loading sprite sheet, it can viewed in ""
-            self.walk_sheet = pygame.image.load('marcaucoin_picture.png').convert_alpha() #WB: Load the sprite sheet image
-            self.idle_sheet = pygame.image.load('marcaucoin_picture.png').convert_alpha() #WB: Load the idle sprite sheet image
-
-        def load_frames(self, sheet, row, start_col, num_frames, flip_horizontal=False, append_reverse = False): #DO: Function to load frames from the sprite sheet
-            frames = [] #DO: Create an empty list to store the frames
-
-        for i in range(num_frames): #DO: Loop through the number of frames to load
-            frame = pygame.Surface((self.sprite_width, self.sprite_height), pygame.SRCALPHA) #DO: creates a surface the size of a single sprite with alpha transparency (i.e. the background is see through for the grid pattern in the sprite sheet)
-            frame.blit(sheet, (0, 0), (start_col *self.sprite_width + i * self.sprite_width, row * self.sprite_height, self.sprite_width, self.sprite_height)) #DO: Draws(BLITS) the sprite sheet onto the frame surface  
-            if flip_horizontal: #DO: If flip_horizontal is True
-                frame = pygame.transform.flip(frame, True, False) #DO: Flip the surface(frame) horizontally (True) but not vertically (False)
-            frames.append(frame) #DO: Add the frame to the frames list
-            if append_reverse: #DO: If a sprite sheet lacks a complete animation it will loop back to the starting animation 
-                frames += frames[::-1] #DO: Append the reversed frames excluding the last frame to create a smooth back-and-forth animation
-        return frames #DO: Return the list of frames
 
         #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
         #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
@@ -386,7 +351,21 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         "left": self.load_frames(idle_sheet, 0, 0, num_frames, True), #WB: Loads animation for idle left
         "right": self.load_frames(idle_sheet, 0, 0, num_frames, False) #WB: Loads animation for idle right
         }
-    
+
+    def load_frames(self, sheet, row, start_col, num_frames, flip_horizontal=False, append_reverse = False): #DO: Function to load frames from the sprite sheet
+        frames = [] #DO: Create an empty list to store the frames
+
+        for i in range(num_frames): #DO: Loop through the number of frames to load
+            frame = pygame.Surface((self.sprite_width, self.sprite_height), pygame.SRCALPHA) #DO: creates a surface the size of a single sprite with alpha transparency (i.e. the background is see through for the grid pattern in the sprite sheet)
+            frame.blit(sheet, (0, 0), (start_col *self.sprite_width + i * self.sprite_width, row * self.sprite_height, self.sprite_width, self.sprite_height)) #DO: Draws(BLITS) the sprite sheet onto the frame surface  
+            if flip_horizontal: #DO: If flip_horizontal is True
+                frame = pygame.transform.flip(frame, True, False) #DO: Flip the surface(frame) horizontally (True) but not vertically (False)
+            frames.append(frame) #DO: Add the frame to the frames list
+            if append_reverse: #DO: If a sprite sheet lacks a complete animation it will loop back to the starting animation 
+                frames += frames[::-1] #DO: Append the reversed frames excluding the last frame to create a smooth back-and-forth animation
+        return frames #DO: Return the list of frames
+
+        
     def enemy_projectile(self, velocity, angle, projectile_type, damage_value):
         projectile = Projectile(self.rect.centerx, self.rect.centery, velocity, angle, projectile_type, id(self), damage_value)
         for group in self.groups():
