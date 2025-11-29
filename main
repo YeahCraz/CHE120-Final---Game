@@ -253,25 +253,28 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
     def __init__(self, x, y, enemy_type = "standard"): #WB: Initialize the enemy class
         super().__init__() #WB: Required when inherit from another class
         self.enemy_type = enemy_type #WB: Set a variable so that the enemy_type can be called in other methods
+        #WB: Defines animation properties
+        self.current_frame = 0
+        self.animation_speed = 0.1 
+        self.animation_timer = 0.0
+        self.current_direction = 'right'  #WB: Based on player's position
+        self.moving = False
+        
+
         if enemy_type == "standard": #WB: Standard type of enemy, the most basic one in the game
             #WB: Define standard enemy's powers
             self.health = 40 #WB: Define standard enemy's health
             self.damage = 1 #WB: Define standard enemy's damage
             
-            # WB: Create a simple placeholder image for testing
-            self.image = pygame.Surface((50, 50)) #WB: Makes the enemy look like a square
-            self.image.fill((255, 0, 0))  #WB: Makes the enemy look like a red square
-            self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
-           
-
             #WB: Define standard enemy's dimensions
             self.sprite_width = 75 #WB: Define standard enemy's width 
             self.sprite_height = 75 #WB: Define standard enemy's height
             self.speed = 200 #WB: Define standard enemy's speed (slower than player)
+            
             #WB: Loading sprite sheet, it can viewed in ""
             self.walk_sheet = pygame.image.load('standard_enemy.png').convert_alpha() #WB: Load the sprite sheet image
             self.idle_sheet = pygame.image.load('standard_enemy.png').convert_alpha() #WB: Load the idle sprite sheet image
-             
+                
             #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
             #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
             self.walk_frames = {
@@ -282,22 +285,21 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             "left": self.load_frames(self.idle_sheet, 0, 0, 10, True), #WB: Loads animation for idle left
             "right": self.load_frames(self.idle_sheet, 0, 0, 10, False) #WB: Loads animation for idle right
             }
+            #DO: creates the image attribute for the sprite
+            self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
+            self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection 
 
         elif enemy_type == "moderate": #WB: Moderate type of enemy
             #WB: Define moderate enemy powers
             self.health = 60 #WB: Define moderate enemy's health
             self.damage = 30 #WB: Define moderate enemy's damage
-            
-             # WB: Create a simple placeholder image for testing
-            self.image = pygame.Surface((50, 20)) #WB: Makes the enemy a rectangle
-            self.image.fill((0, 255, 0))  #WB: Makes the enemy look like a green rectangle
-            self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
 
             #WB: Define moderate enemy's dimensions
             self.sprite_width = 50 #WB: Define moderate enemy's width 
             self.sprite_height = 60 #WB: Define moderate enemy's height
             self.speed = 210 #WB: Define moderate enemy's speed (slower than player but faster than standard)
-            #WB: loading sprite sheet, it can viewed in "neo_zero_V1.0____Credit_YaninYunus"
+            
+            #WB: loading sprite sheet, it can viewed in ""
             self.walk_sheet = pygame.image.load('Moderate_enemy.png').convert_alpha() #DO: Load the sprite sheet image
             self.idle_sheet = pygame.image.load('Moderate_enemy.png').convert_alpha() #DO: Load the idle sprite sheet image
             
@@ -311,6 +313,10 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             "left": self.load_frames(self.idle_sheet, 0, 0, 10, True), #WB: Loads animation for idle left
             "right": self.load_frames(self.idle_sheet, 0, 0, 10, False) #WB: Loads animation for idle right
             }
+            
+            #DO: creates the image attribute for the sprite
+            self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
+            self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection 
 
         elif enemy_type == "strong": #WB: Strong type of enemy 
             #WB: Define strong enemy's powers
@@ -322,15 +328,11 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.sprite_width = 80 #WB: Define the width of the strong enemy
             self.sprite_height = 80 #WB: Define the width of the strong enemy
             self.speed = 200 #WB: Define the speed of the strong enemy (slightly slower than player)
+           
             #WB: loading sprite sheet, it can viewed in ""
             self.walk_sheet = pygame.image.load('strong_enemy.png').convert_alpha() #DO: Load the sprite sheet image
             self.idle_sheet = pygame.image.load('strong_enemy.png').convert_alpha() #DO: Load the idle sprite sheet image
-           
-            # WB: Create a simple placeholder image for testing
-            #self.image = pygame.Surface((60, 60)) #WB: I'm going to change the image later but makes the enemy a square
-            #self.image.fill((0, 0, 255))  #WB: Makes the enemy look like a blue square
-            #self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
-            
+
             #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
             #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
             self.walk_frames = {
@@ -341,6 +343,9 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             "left": self.load_frames(self.idle_sheet, 0, 0, 4, True), #WB: Loads animation for idle left
             "right": self.load_frames(self.idle_sheet, 0, 0, 4, False) #WB: Loads animation for idle right
             }
+            #DO: creates the image attribute for the sprite
+            self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
+            self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection
 
         elif enemy_type == "shooting": #WB: Shooting type of enemy 
             #WB: Define shooting enemy's powers
@@ -349,40 +354,21 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.last_shot_time = pygame.time.get_ticks() #WB: Tracks the time 
             self.shooting_cooldown = 2000 #WB: Sets the cooldown time to 2 seconds. The enemy shoots every 2 seconds
             
-            #self.walk_sheet = pygame.image.load('marcaucoin_picture.png').convert_alpha() #WB: Load the sprite sheet image
-            #self.idle_sheet = pygame.image.load('marcaucoin_picture.png').convert_alpha() #WB: Load the idle sprite sheet image
 
             #WB: Define strong enemy's dimensions
             self.sprite_width = 20 #WB: Define the width of the shooting enemy
             self.sprite_height = 20 #WB: Define the width of the shooting enemy
             self.speed = 150 #WB: Define the speed of the shooting enemy (slower than player)
-           
-            # WB: Create a simple placeholder image for testing
-            self.image = pygame.image('marcaucoin_picture.png') #WB: I'm going to change the image later but makes the enemy a square
-            self.rect = self.image.get_rect(center=(x,y)) #WB: This provides a rectangle around the enemy for the collision detection
             
-        #WB: Defines animation properties
-        self.current_frame = 0
-        self.animation_speed = 0.1 
-        self.animation_timer = 0.0
-        self.current_direction = 'right'  #WB: Based on player's position
-        self.moving = False
+            # WB: Creates a png image of Professor Aucoin
+            self.image = pygame.image.load('marcaucoin_picture.png').convert_alpha()
+            self.rect = self.image.get_rect(center=(x, y))
+  
         
-
-        #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
-        #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
-        #self.walk_frames = {
-        #"left": self.load_frames(self.walk_sheet, 0, 0, num_frames, True), #WB: Loads animation for walking left
-        #"right": self.load_frames(self.walk_sheet, 0, 0, num_frames, False) #WB: Loads animation for walking right 
-        #}
-        #self.idle_frames = {
-        #"left": self.load_frames(self.idle_sheet, 0, 0, num_frames, True), #WB: Loads animation for idle left
-        #"right": self.load_frames(self.idle_sheet, 0, 0, num_frames, False) #WB: Loads animation for idle right
-        #}
 
     def load_frames(self, sheet, row, start_col, num_frames, flip_horizontal=False, append_reverse = False): #DO: Function to load frames from the sprite sheet
         frames = [] #DO: Create an empty list to store the frames
-
+        
         for i in range(num_frames): #DO: Loop through the number of frames to load
             frame = pygame.Surface((self.sprite_width, self.sprite_height), pygame.SRCALPHA) #DO: creates a surface the size of a single sprite with alpha transparency (i.e. the background is see through for the grid pattern in the sprite sheet)
             frame.blit(sheet, (0, 0), (start_col *self.sprite_width + i * self.sprite_width, row * self.sprite_height, self.sprite_width, self.sprite_height)) #DO: Draws(BLITS) the sprite sheet onto the frame surface  
@@ -447,19 +433,22 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
                 #self.image = pygame.Surface((int(size), int(size)))
                 
     def enemy_animations (self, dt): #WB: Handles animations based on movement
-        if self.moving: #DO: If the enemy is moving run the walking animation
-            self.animation_timer += dt #DO: Increment the animation timer by delta time
-            if self.animation_timer >= self.animation_speed:
+        if hasattr(self, 'walk_frames') and hasattr(self, 'idle_frames'): #WB: Makes sure shooting enemy is handled and the image stays static)
+        
+            if self.moving:  #DO: If the enemy is moving run the walking animation
+                self.animation_timer += dt #DO: Increment the animation timer by delta time
+                if self.animation_timer >= self.animation_speed:
                     self.animation_timer = 0 #DO: Reset the animation timer
-                    self.current_frame = (self.current_frame +1) % len(self.walk_frames[self.current_direction])
+                    self.current_frame = (self.current_frame + 1) % len(self.walk_frames[self.current_direction])
                     self.image = self.walk_frames[self.current_direction][self.current_frame] #DO: Update the enemy's image to the current frame of the current direction's animation from the sprite sheet
-        else: #DO: If the enemy is not moving, set to idle frame
-            self.animation_timer += dt
-            if self.animation_timer >= self.animation_speed:
+            else:  #DO: If the enemy is not moving, set to idle frame
+                self.animation_timer += dt
+                if self.animation_timer >= self.animation_speed:
                     self.animation_timer = 0.
                     self.current_frame = (self.current_frame + 1) % len(self.idle_frames[self.current_direction])
-                    self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: Update the player's image to the second frame of the current direction's animation
-    
+                    self.image = self.idle_frames[self.current_direction][self.current_frame]
+
+        
 
     #DO: Update function to be called every frame
     def update(self, dt, player_rect): 
