@@ -22,40 +22,36 @@ class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
         self.projectile_type = projectile_type #FS: Will use projectile dictionary and touhou sprite sheet eventually
         self.owner_id = owner_id #FS: Projectile owner, will be used to make sure players/enemies don't hit themselves
         self.damage_value = float(damage_value) #FS: Damage value of the projectile
-        # FS: Alright, for now instead of using the spritesheet (since idk how), Draw a simple circle for the projectile; color depends on type
-        radius = 8
-        if self.projectile_type == 'plasma': #FS: Added handling for ID of the projectile type. Nice!
-            color = (255, 255, 0)  # yellow
-        elif self.projectile_type == 'laser': 
-            color = (50, 150, 255)  # blue
-        else:
-            color = (255, 255, 255)  # default white
+        # FS: Changing bullet size and color by projectile type
+        # FS: Turns out there's no need for the projectile sprite sheet! right now at least, im satisfied with these.
+        size_map = { #FS: yeah, just add any entries here for new projectile types
+            'plasma': 8,
+            'laser': 4,
+            'bubble': 18,
+        }
+        color_map = { #FS: projectile colors yipeeeeeeeee
+            'plasma': (255, 255, 0),
+            'laser': (50, 150, 255),
+            'bubble': (50, 0, 255),
+        }
+        radius = size_map.get(self.projectile_type, 8)
+        color = color_map.get(self.projectile_type, (255, 255, 255))
         self.image = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, color, (radius, radius), radius) #FS: Currently makes a circle, can be changed.
-        self.rect = self.image.get_rect(center=(x, y))
+        pygame.draw.circle(self.image, color, (radius, radius), radius)
+        # FS: making bubbles, yknow, look cool
+        if self.projectile_type == 'bubble':
+            pygame.draw.circle(self.image, (255, 255, 255), (radius, radius), max(0, radius-3)) #FS: overlays a second circle for S T Y L E
+        self.radius = radius
+        self.rect = self.image.get_rect(center=(self.x, self.y))
 
     def update(self, dt):
         import math
         dx = self.velocity * math.cos(self.angle) * dt #FS: velocity of projectile in x
         dy = self.velocity * math.sin(self.angle) * dt #FS: velocity of projectile in y
-        #DO: correcting for rects given that i changed these to floats
-        self.rect.x += int(dx)
-        self.rect.y += int(dy)
-    
-    #FS: Projectile type dictionary
-    projectile_dictionary = {
-        "plasma": 1,
-        "caliber": 2,
-        "bean": 3,
-        "star_sm": 4,
-        "star_med": 5,
-        "rice": 6,
-        "seed": 7,
-        "mentos": 8,
-        "water": 9,
-        "laser": 10
-    }
-
+        # FS: Updating center to keep center precise for collision detection
+        self.x += dx
+        self.y += dy
+        self.rect.center = (int(self.x), int(self.y))
 
 class Player(pygame.sprite.Sprite): #DO: Define a player class
     def __init__(self,x,y): #DO: initialize the player class
@@ -239,16 +235,6 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
             group.add(projectile)
         return projectile
     
-    #FS: TEST FUNCTION, IGNORE (USED FOR TESTING PROJECTILES FROM ANYWHERE)
-    '''
-    def projectile_anywhere(self, x, y, velocity, angle, projectile_type, damage_value):
-        projectile = Projectile(x, y, velocity, angle, projectile_type, id(self), damage_value)
-        for group in self.groups():
-            group.add(projectile)
-        return projectile
-    '''
-    #FS: END OF TEST FUNCTION, IGNORE
-
 class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
     def __init__(self, x, y, enemy_type = "standard"): #WB: Initialize the enemy class
         super().__init__() #WB: Required when inherit from another class
@@ -522,6 +508,10 @@ class App(): #DO: Define the main application class
         #DO: Wall variables 
         self.walls = pygame.sprite.Group() #DO: initalizes wall sprites
         self.collision_rects = []
+        self.attack_time1 = pygame.time.get_ticks() #FS: Time tracker for first player attack
+        self.attack_time2 = pygame.time.get_ticks() #FS: Time tracker for second player attack
+        self.attack_interval_1 = 250 #FS Interval for first shot type that player equips.
+        self.attack_interval_2 = 1000  #FS Interval for second shot type that player equips.
 
 
     def on_init(self): #DO: Calls pygame.init()
@@ -552,47 +542,6 @@ class App(): #DO: Define the main application class
     def on_event(self, event): #DO: Handle events
         if event.type == pygame.QUIT: #DO: if the user clicks the close button ends program
             self._running = False
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_e:
-                # FS: Fires projectile in front of player
-                direction = self.player.current_direction
-                # FS: Angle: right = 0, left = pi (turns out it uses radians huh)
-                angle = 0 + random.random() - random.random() if direction == 'right' else math.pi + random.random() - random.random() #FS: Adjustable angle, some bullets can be random spread maybe??
-                velocity = 500 #FS: Adjustable velocity
-                projectile_type = 'plasma' # FS: probably will switch these values over to IDs later on
-                damage_value = 10
-                self.player.player_projectile(velocity, angle, projectile_type, damage_value)
-            if event.key == pygame.K_p:
-                # FS: Fires projectile in front of player
-                direction = self.player.current_direction
-                # FS: Angle: right = 0, left = pi
-                angle = 0 if direction == 'right' else math.pi
-                velocity = 1000 # FS: adjustable velocity
-                projectile_type = 'laser' # FS: probably will switch these values over to IDs later on
-                damage_value = 10
-                self.player.player_projectile(velocity, angle, projectile_type,damage_value)
-            if event.key == pygame.K_l:
-                # FS: Let's try a shotgun! Fires 3 projectiles in a spread
-                direction = self.player.current_direction
-                # FS: Angle: right = 0, left = pi (turns out it uses radians huh)
-                velocity = 500 #FS: Adjustable velocity
-                projectile_type = 'plasma' # FS: probably will switch these values over to IDs later on
-                damage_value = 10
-                triplet_angles = [-math.pi/6,0,math.pi/6] if direction == 'right' else [math.pi + math.pi/6, math.pi, math.pi - math.pi/6]
-                for angle in triplet_angles:
-                    self.player.player_projectile(velocity, angle, projectile_type, damage_value)
-                #FS: Some current issues, angles aren't equally spread and I don't know why yet.
-                #DO: recall that when going around a circle to go beyond pi into Q3 of a cartesian plane you must add pi not subtract
-                #DO: swapped ur signs in the "right" logic and it is now even.
-
-                #FS: ALL OF THIS IS TEST CODE, IGNORE
-                '''    
-                circle8 = [1,2,3,4,5,6,7,8]
-                thingythingy = math.pi/8
-                for entry in circle8:
-                    self.player.projectile_anywhere(200,200,500,entry*thingythingy,projectile_type,damage_value)
-                '''
-                #FS: END OF TEST CODE, IGNORE
     
     def on_spawn(self,dt,number_enemies,boss=False): #WB: Makes the enemies spawn in the game 
         
@@ -634,8 +583,47 @@ class App(): #DO: Define the main application class
             self.shooting_enemy_time = current_time #WB: Makes the shooting enemy spawn every 30 seconds
             self.enemies.add(shooting_enemy) #WB: Adds shooting enemy to the enemies group
             self.all_sprites.add(shooting_enemy) #WB: Adds shooting enemy to the all sprites group
-       
 
+            #FS: The code responsible for the bullet heaven, enjoy
+            #FS: This is entirely customizable. Randomized bullets can be made with pi, multishot can be made with for loops, and altered bullet types are available for use up in the projectile class.
+            #FS: Alr Darius, so if you're going to be switching out these bullet types many times per game then you'll want to assign the properties to variables.
+            #FS: Not sure how you'll handle them, but here's the template for all of the properties you need at the moment.
+            '''
+            attack_velocity_1 = 0
+            attack_projectile_type_1 = ''
+            attack_damage_value_1 = 0
+            attack_angle_1 = 0 #FS: this one might be a bit harder to implement but yeah.
+            attack_velocity_2 = 0
+            attack_projectile_type_2 = ''   
+            attack_damage_value_2 = 0
+            attack_angle_2 = 0
+            '''
+            #FS: Also to let you know, attack_interval_1 and attack_interval_2 are defined up in the app init function.
+            #FS: They are currently set to 250ms and 1000ms respectively, but you can change them as needed.
+
+        if current_time - self.attack_time1 > self.attack_interval_1: #FS: Handles the attack interval for the first shot type
+            self.attack_time1 = current_time
+            # FS: Fires projectile in front of player
+            direction = self.player.current_direction
+            # FS: Angle: right = 0, left = pi 
+            if direction == 'left': angle = math.pi; 
+            else: angle = 0 
+            velocity = 500 #FS: Adjustable velocity
+            projectile_type = 'plasma' # FS: depending on the string here, this affects bullet color AND bullet size. maybe... even shape?
+            damage_value = 10
+            self.player.player_projectile(velocity, angle, projectile_type, damage_value)
+        if current_time - self.attack_time2 > self.attack_interval_2: #FS: Handles the attack interval for the second shot type
+            self.attack_time2 = current_time
+            # FS: Changed the shotgun. Enter: a generic ring of 8 bullets!
+            velocity = 500 
+            projectile_type = 'bubble' 
+            damage_value = 5
+            num_shots = 8
+            for i in range(num_shots):
+                angle = i * (2 * math.pi) / num_shots
+                self.player.player_projectile(velocity, angle, projectile_type, damage_value)
+            #FS: If you want to add even more, feel free because its just straight up copy paste from above. 
+    
         self.player.update(self.dt,self.collision_rects) #DO: Player logic that makes walls work, likely will also later work with enemy collisions
         for sprite in self.all_sprites:
             if isinstance(sprite, Projectile): #DO: parses all sprites in all_sprites and runs the regular code for that sprite if its a projectile.
