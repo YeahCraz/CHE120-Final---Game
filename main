@@ -11,6 +11,188 @@ import pytmx #DO: Import pytmx (makes maps)
 import math #DO: importing math at the top is better notation and allows for it to be used globally
 import random #FS: For potential randomization of projectile/character/enemy properties
 
+
+
+class DamageNumber(pygame.sprite.Sprite):
+    def __init__(self,x,y,damage,colour = (255,50,50)):
+        super().__init__()
+        self.damage = damage
+        self.colour = colour
+        self.lifetime = 1.
+        self.timer = 0.
+        self.velocity_y = -50 #DO: damage numebrs move up during their lifetime just like the real game
+
+        font = pygame.font.Font(None, 24)
+        self.image = font.render(str(int(damage)), True, colour) #
+        self.rect = self.image.get_rect(center = (x,y))
+    #DO: standardizing for all systems
+    def update(self,dt):
+        self.timer += dt
+        self.velocity_y += 100* dt
+        self.rect.y += int(self.velocity_y * dt)
+
+        #DO: numbers fade out
+        alpha = max(0,255 - int(255 * (self.timer / self.lifetime)))
+        self.image.set_alpha(alpha)
+
+        #DO: kill the thing after its timer exceeds its lifespan
+        if self.timer >= self.lifetime:
+            self.kill()
+
+
+class PlayerStats:
+    def __init__(self):
+        #DO: lvls related stats
+        self.level = 1
+        self.exp = 0
+        self.exp_to_next_level = 10
+        self.available_upgrade_points = 0
+        self.total_exp_gained = 0
+        self.on_level_up = None
+
+        #DO: Base stats
+        self.max_health = 100 #DO: max player health
+        self.current_health = 100 #DO: current player health
+        self.health_regen = 0.5 #DO: by what amount does our char regen hp
+        self.base_damage = 10. #DO: base damage for char? will likely change to based on weapon
+        self.cooldown_reduction = 1.0 #DO: how fast do we fire our weapon
+        self.crit_chance = 0. #DO: chance to do 300% damage
+        self.crit_multiplier = 2.
+        self.projectile_size = 1.0 #DO: makes projectile bigger by a factor of this
+        self.move_speed_multiplier = 1.0 #DO: move_speed factor that multiplies our base speed
+        self.damage_multiplier = 1. #DO: by how much should we multiply our damage
+        self.projectile_speed_multiplier = 1. #DO: how fast do bullets actually move
+        self.exp_growth = 1. #DO: how fast does our exp grow compared to base?
+        
+        #DO: Weapon management
+        self.active_weapons = []
+        self.weapon_levels = {
+            'plasma' : 0,
+            'bubble': 0, 
+            'laser': 0
+        }
+        self.weapon_cooldowns = {}
+
+    def add_exp(self,amount):
+        self.exp+=amount *self.exp_growth
+        self.total_exp_gained += amount * self.exp_growth
+        
+        #DO: if we lvl up
+        while self.exp >= self.exp_to_next_level:
+            self.level_up()
+    def level_up(self):
+        self.exp -=self.exp_to_next_level
+        self.level += 1
+        self.available_upgrade_points +=1
+        self.exp_to_next_level = int(self.exp_to_next_level *1.5)
+
+        #DO: small stat increases so you dont fall too behind if you choose another path for these important stats
+        self.max_health = int(self.max_health*1.1)
+        self.base_damage = int(self.base_damage*1.05)
+
+        if self.on_level_up:
+            self.on_level_up()
+    #DO: calls my phone when we lvl up so we dont have to check periodically
+    def set_level_up_callback(self,callback):
+        self.on_level_up = callback
+    def add_weapon(self, weapon_type):
+        #DO: adds a weapon to active weapons if below 3 weapons
+        if weapon_type not in self.active_weapons and len(self.active_weapons) <3:
+            self.active_weapons.append(weapon_type)
+            self.weapon_levels[weapon_type] = 1
+            self.weapon_cooldowns[weapon_type] = 0
+            return True
+        return False
+    def upgrade_weapon(self,weapon_type):
+        if weapon_type in self.active_weapons:
+            self.weapon_levels[weapon_type] += 1
+            return True
+        return False
+    def upgrade(self, upgrade_type):
+        #DO: if we dont have one return False
+        if self.available_upgrade_points <= 0:
+            return False
+        #DO: uses upgrade
+        self.available_upgrade_points -=1
+
+        if upgrade_type == 'max_health':
+            self.max_health +=30
+            self.current_health +=30
+        elif upgrade_type == 'move_speed':
+            self.move_speed_multiplier +=0.1
+        elif upgrade_type == 'health_regen':
+            self.health_regen +=0.4
+        elif upgrade_type == "damage":
+            self.damage_multiplier += 0.2
+        elif upgrade_type == "attack_speed":
+            self.cooldown_reduction *= 0.9
+        elif upgrade_type == "projectile_size":
+            self.projectile_size += 0.2
+        elif upgrade_type == 'exp_growth':
+            self.exp_growth += 0.1
+        elif upgrade_type == 'projectile_speed':
+            self.projectile_speed_multiplier +=2
+        elif upgrade_type == 'crit_chance':
+            self.crit_chance = min(1.,self.crit_chance +0.05) #DO: cant exceed 100% crit
+        elif upgrade_type in ['plasma', 'bubble', 'laser']:
+            if upgrade_type not in self.active_weapons:
+                return self.add_weapon(upgrade_type)
+            else:
+                self.upgrade_weapon(upgrade_type)
+        
+        return True
+    def calculate_damage(self, base_damage = None):
+        #DO: uses base damage if no base damage argument
+        if base_damage == None:
+            base_damage = self.base_damage
+        damage = base_damage*self.damage_multiplier
+
+        #DO: crit?
+        if random.random() < self.crit_chance:
+            damage *=self.crit_multiplier
+            return damage, True #DO: true acts as a crit flag to inidcate a crit occured
+        return damage, False
+    def get_attack_interval(self, base_interval):
+        return base_interval*self.cooldown_reduction
+    def get_projectile_speed(self,base_speed):
+        return base_speed * self.projectile_speed_multiplier
+    def get_projectile_radius(self,base_radius):
+        return base_radius * self.projectile_size
+    def get_weapon_cooldown(self,weapon_type):
+        #DO: get the base cd for each weapon
+        cooldowns = {
+            'plasma': 800 - self.weapon_levels['plasma'] * 25, #middle ground
+            'bubble': 1200 ,  #slow and big
+            'laser': 500 - self.weapon_levels['laser'] * 50 #fast
+        }
+        return cooldowns.get(weapon_type, 1000)
+    def get_weapon_damage(self, weapon_type):
+        #DO: get base damage for weapon
+        base_damages = {
+            'plasma': 6,
+            'bubble': 5, 
+            'laser': 2
+        }
+        if weapon_type == 'plasma':
+            level_bonus = self.weapon_levels[weapon_type] * 3
+        else:
+            level_bonus = self.weapon_levels[weapon_type] * 2
+        return base_damages.get(weapon_type,10) + level_bonus
+    def can_shoot_weapon(self, weapon_type, current_time):
+        #DO: checks if weapon can shoot 
+        if weapon_type not in self.active_weapons:
+            return False
+            
+        base_cooldown = self.get_weapon_cooldown(weapon_type)
+        actual_cooldown = self.get_attack_interval(base_cooldown)
+        last_shot = self.weapon_cooldowns.get(weapon_type, 0)
+        
+        return current_time - last_shot >= actual_cooldown
+
+    def mark_weapon_shot(self, weapon_type, current_time):
+        #DO: updates the last based upon when a weapon was last fired
+        self.weapon_cooldowns[weapon_type] = current_time
+        
 class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
     def __init__(self, x, y, velocity, angle, projectile_type, owner_id, damage_value): #FS: Class for initializing projectiles
         #DO: changed variables to float where precision would be useful
@@ -117,7 +299,7 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
                 frame = pygame.transform.flip(frame, True, False) #DO: Flip the surface(frame) horizontally (True) but not vertically (False)
             frames.append(frame) #DO: Add the frame to the frames list
             if append_reverse: #DO: If a sprite sheet lacks a complete animation it will loop back to the starting animation 
-                frames += frames[::-1] #DO: Append the reversed frames excluding the last frame to create a smooth back-and-forth animation
+                frames += frames[-2::-1] #DO: Append the reversed frames excluding the last frame to create a smooth back-and-forth animation
         return frames #DO: Return the list of frames
     def movement(self, dt, collision_rects = None):
         keys = pygame.key.get_pressed() #DO: Get the state of all keyboard buttons
@@ -217,8 +399,8 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
             self.animation_timer += dt
             if self.animation_timer >= self.animation_speed:
                 self.animation_timer = 0.
-                self.current_frame = (self.current_frame + 1) % len(self.idle_frames[self.current_direction])
-                self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: Update the player's image to the second frame of the current direction's animation
+                self.current_frame = (self.current_frame + 1) % len(self.walk_frames[self.current_direction])
+                self.image = self.walk_frames[self.current_direction][self.current_frame] #DO: Update the player's image to the second frame of the current direction's animation
     
 
     #DO: Update function to be called every frame
@@ -245,39 +427,37 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         self.animation_timer = 0.0
         self.current_direction = 'right'  #WB: Based on player's position
         self.moving = False
+        self.max_health = 0 #DO: limits max health of an enemy (placeholder)
         
 
         if enemy_type == "standard": #WB: Standard type of enemy, the most basic one in the game
             #WB: Define standard enemy's powers
             self.health = 40 #WB: Define standard enemy's health
+            self.max_health = 40
             self.damage = 1 #WB: Define standard enemy's damage
             
             #WB: Define standard enemy's dimensions
-            self.sprite_width = 75 #WB: Define standard enemy's width 
-            self.sprite_height = 75 #WB: Define standard enemy's height
+            self.sprite_width = 32 #WB: Define standard enemy's width 
+            self.sprite_height = 25 #WB: Define standard enemy's height
             self.speed = 200 #WB: Define standard enemy's speed (slower than player)
             
             #WB: Loading sprite sheet, it can viewed in ""
-            self.walk_sheet = pygame.image.load('standard_enemy.png').convert_alpha() #WB: Load the sprite sheet image
-            self.idle_sheet = pygame.image.load('standard_enemy.png').convert_alpha() #WB: Load the idle sprite sheet image
+            self.walk_sheet = pygame.image.load('Slime\slime-Sheet.png').convert_alpha() #WB: Load the sprite sheet image
                 
             #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
             #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
             self.walk_frames = {
-            "left": self.load_frames(self.walk_sheet, 0, 0, 10, True), #WB: Loads animation for walking left
-            "right": self.load_frames(self.walk_sheet, 0, 0, 10, False) #WB: Loads animation for walking right 
-            }
-            self.idle_frames = {
-            "left": self.load_frames(self.idle_sheet, 0, 0, 10, True), #WB: Loads animation for idle left
-            "right": self.load_frames(self.idle_sheet, 0, 0, 10, False) #WB: Loads animation for idle right
+            "left": self.load_frames(self.walk_sheet, 0, 0, 4, False, True, 2), #WB: Loads animation for walking left
+            "right": self.load_frames(self.walk_sheet, 0, 0, 4, True, True, 2) #WB: Loads animation for walking right 
             }
             #DO: creates the image attribute for the sprite
-            self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
+            self.image = self.walk_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
             self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection 
 
         elif enemy_type == "moderate": #WB: Moderate type of enemy
             #WB: Define moderate enemy powers
             self.health = 60 #WB: Define moderate enemy's health
+            self.max_health = 60
             self.damage = 30 #WB: Define moderate enemy's damage
 
             #WB: Define moderate enemy's dimensions
@@ -285,28 +465,23 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.sprite_height = 60 #WB: Define moderate enemy's height
             self.speed = 210 #WB: Define moderate enemy's speed (slower than player but faster than standard)
             
-            #WB: loading sprite sheet, it can viewed in ""
-            self.walk_sheet = pygame.image.load('Moderate_enemy.png').convert_alpha() #DO: Load the sprite sheet image
-            self.idle_sheet = pygame.image.load('Moderate_enemy.png').convert_alpha() #DO: Load the idle sprite sheet image
-            
+            #WB: Loading sprite sheet, it can viewed in ""
+            self.walk_sheet = pygame.image.load('Slime\slime-Sheet.png').convert_alpha() #WB: Load the sprite sheet image
+                
             #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
             #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
             self.walk_frames = {
-            "left": self.load_frames(self.walk_sheet, 0, 0, 10, True), #WB: Loads animation for walking left
-            "right": self.load_frames(self.walk_sheet, 0, 0, 10, False) #WB: Loads animation for walking right 
+            "left": self.load_frames(self.walk_sheet, 0, 0, 4, False, True, 2), #WB: Loads animation for walking left
+            "right": self.load_frames(self.walk_sheet, 0, 0, 4, True, True, 2) #WB: Loads animation for walking right 
             }
-            self.idle_frames = {
-            "left": self.load_frames(self.idle_sheet, 0, 0, 10, True), #WB: Loads animation for idle left
-            "right": self.load_frames(self.idle_sheet, 0, 0, 10, False) #WB: Loads animation for idle right
-            }
-            
             #DO: creates the image attribute for the sprite
-            self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
+            self.image = self.walk_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
             self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection 
 
         elif enemy_type == "strong": #WB: Strong type of enemy 
             #WB: Define strong enemy's powers
             self.health = 70 #WB: Define strong enemy's health
+            self.max_health = 70
             self.damage = 35 #WB: Define strong enemy's damage 
             
 
@@ -315,54 +490,61 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.sprite_height = 80 #WB: Define the width of the strong enemy
             self.speed = 200 #WB: Define the speed of the strong enemy (slightly slower than player)
            
-            #WB: loading sprite sheet, it can viewed in ""
-            self.walk_sheet = pygame.image.load('strong_enemy.png').convert_alpha() #DO: Load the sprite sheet image
-            self.idle_sheet = pygame.image.load('strong_enemy.png').convert_alpha() #DO: Load the idle sprite sheet image
-
+            #WB: Loading sprite sheet, it can viewed in ""
+            self.walk_sheet = pygame.image.load('Slime\slime-Sheet.png').convert_alpha() #WB: Load the sprite sheet image
+                
             #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
             #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
             self.walk_frames = {
-            "left": self.load_frames(self.walk_sheet, 0, 0, 4, True), #WB: Loads animation for walking left
-            "right": self.load_frames(self.walk_sheet, 0, 0, 4, False) #WB: Loads animation for walking right 
-            }
-            self.idle_frames = {
-            "left": self.load_frames(self.idle_sheet, 0, 0, 4, True), #WB: Loads animation for idle left
-            "right": self.load_frames(self.idle_sheet, 0, 0, 4, False) #WB: Loads animation for idle right
+            "left": self.load_frames(self.walk_sheet, 0, 0, 4, False, True, 2), #WB: Loads animation for walking left
+            "right": self.load_frames(self.walk_sheet, 0, 0, 4, True, True, 2) #WB: Loads animation for walking right 
             }
             #DO: creates the image attribute for the sprite
-            self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
-            self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection
+            self.image = self.walk_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
+            self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection 
 
-        elif enemy_type == "shooting": #WB: Shooting type of enemy 
+        elif enemy_type == "boss": #WB: Shooting type of enemy 
             #WB: Define shooting enemy's powers
-            self.health = 80 #WB: Define shooting enemy's health
-            self.damage = 10 #WB: Define shooting enemy's damage 
-            self.last_shot_time = pygame.time.get_ticks() #WB: Tracks the time 
-            self.shooting_cooldown = 2000 #WB: Sets the cooldown time to 2 seconds. The enemy shoots every 2 seconds
-            
+            self.health = 250
+            self.max_health = 250
+            self.damage = 40 #WB: Define shooting enemy's damage 
 
             #WB: Define strong enemy's dimensions
-            self.sprite_width = 20 #WB: Define the width of the shooting enemy
-            self.sprite_height = 20 #WB: Define the width of the shooting enemy
-            self.speed = 150 #WB: Define the speed of the shooting enemy (slower than player)
+            self.sprite_width = 100 #WB: Define the width of the shooting enemy
+            self.sprite_height = 100 #WB: Define the width of the shooting enemy
+            self.speed = 100 #WB: Define the speed of the shooting enemy (slower than player)
             
             # WB: Creates a png image of Professor Aucoin
             self.image = pygame.image.load('marcaucoin_picture.png').convert_alpha()
+            self.image = pygame.transform.scale(self.image, (self.sprite_width, self.sprite_height))
             self.rect = self.image.get_rect(center=(x, y))
   
-        
 
-    def load_frames(self, sheet, row, start_col, num_frames, flip_horizontal=False, append_reverse = False): #DO: Function to load frames from the sprite sheet
+    def load_frames(self, sheet, row, start_col, num_frames, flip_horizontal=False, append_reverse = False, resize_factor = 0): #DO: Function to load frames from the sprite sheet
+        '''
+        sheet - which sprite sheet
+        row - which row to start at in said sheet
+        start_col - which col to start at
+        num_frames - number of frames
+        flip_horizontal - do we flip the images 
+        append_reverse - should we append the image again but in reverse?
+        desired_width - resize sprite? requires height argument as well. Factor by which to scale image
+        desired_height - resize sprite? requires width argument as well. Factor by which to scale image
+        '''
         frames = [] #DO: Create an empty list to store the frames
-        
+        resize = False
+        if resize_factor != 0:
+            resize = True
         for i in range(num_frames): #DO: Loop through the number of frames to load
             frame = pygame.Surface((self.sprite_width, self.sprite_height), pygame.SRCALPHA) #DO: creates a surface the size of a single sprite with alpha transparency (i.e. the background is see through for the grid pattern in the sprite sheet)
             frame.blit(sheet, (0, 0), (start_col *self.sprite_width + i * self.sprite_width, row * self.sprite_height, self.sprite_width, self.sprite_height)) #DO: Draws(BLITS) the sprite sheet onto the frame surface  
             if flip_horizontal: #DO: If flip_horizontal is True
                 frame = pygame.transform.flip(frame, True, False) #DO: Flip the surface(frame) horizontally (True) but not vertically (False)
+            if resize: 
+                frame = pygame.transform.scale(frame,(self.sprite_width *resize_factor,self.sprite_height*resize_factor))
             frames.append(frame) #DO: Add the frame to the frames list
             if append_reverse: #DO: If a sprite sheet lacks a complete animation it will loop back to the starting animation 
-                frames += frames[::-1] #DO: Append the reversed frames excluding the last frame to create a smooth back-and-forth animation
+                frames += frames[-2:0:-1] #DO: Append the reversed frames excluding the last frame to create a smooth back-and-forth animation
         return frames #DO: Return the list of frames
 
         
@@ -392,34 +574,8 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
             self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
         
-
-            
-
-
-
-    
-    def enemy_shooting_animations (self, dt, enemy_type = "shooting"): #WB: Handles shooting enemy animations based on movement
-    # WB: Simple shape animation for now FIX THIS AFTER PLEASE
-        self.animation_timer += dt
-    
-        if self.animation_timer >= self.animation_speed:
-            self.animation_timer = 0
-            self.current_frame = (self.current_frame + 1) % 4
-        
-        # WB: Simple size pulse based on movement
-        if self.moving:
-            size = 50 + (self.current_frame * 3)  # 50, 53, 56, 53
-        else:
-            size = 48 + (self.current_frame * 1)  # 48, 49, 50, 49
-        
-        # WB: Keep the original color but change size
-            #if hasattr(self, 'image'):
-                #WB: Get current color from the image
-                #current_color = self.image.get_at((0, 0))
-                #self.image = pygame.Surface((int(size), int(size)))
-                
     def enemy_animations (self, dt): #WB: Handles animations based on movement
-        if hasattr(self, 'walk_frames') and hasattr(self, 'idle_frames'): #WB: Makes sure shooting enemy is handled and the image stays static)
+        if hasattr(self, 'walk_frames'): #WB: Makes sure shooting enemy is handled and the image stays static)
         
             if self.moving:  #DO: If the enemy is moving run the walking animation
                 self.animation_timer += dt #DO: Increment the animation timer by delta time
@@ -431,8 +587,8 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
                 self.animation_timer += dt
                 if self.animation_timer >= self.animation_speed:
                     self.animation_timer = 0.
-                    self.current_frame = (self.current_frame + 1) % len(self.idle_frames[self.current_direction])
-                    self.image = self.idle_frames[self.current_direction][self.current_frame]
+                    self.current_frame = (self.current_frame + 1) % len(self.walk_frames[self.current_direction])
+                    self.image = self.walk_frames[self.current_direction][self.current_frame]
 
         
 
@@ -441,7 +597,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         self.movement(player_rect, dt) #WB: Updates the enemy's movements
         self.enemy_animations(dt) #WB: Calls the animation method
         
-        if self.enemy_type == 'shooting': #WB: Checks the enemy type
+'''  if self.enemy_type == 'shooting': #WB: Checks the enemy type
             current_time= pygame.time.get_ticks() #WB: Keeps track of the time by assigning it to a variable
             if current_time - self.last_shot_time > self.shooting_cooldown: #WB: Makes the shooting enemy shoot every 2 seconds
                 self.last_shot_time = current_time #WB: Updates the current time
@@ -450,6 +606,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
                 angle = math.atan2(dy, dx)
                 damage_value = 10
                 self.enemy_projectile(500, angle, 'star_med', 10)
+                '''
             
             
 
@@ -512,6 +669,25 @@ class App(): #DO: Define the main application class
         self.attack_time2 = pygame.time.get_ticks() #FS: Time tracker for second player attack
         self.attack_interval_1 = 250 #FS Interval for first shot type that player equips.
         self.attack_interval_2 = 1000  #FS Interval for second shot type that player equips.
+        #DO: player stats
+        self.player_stats = PlayerStats()
+        self.upgrade_gui_active = False
+        self.upgrade_options = []
+        self.selected_upgrade = 0
+        self.attack_interval_1_base = 250 #DO: in ms
+        self.attack_interval_2_base = 1000
+        #DO: pausing state for upgraddes
+        self.game_paused = False
+
+
+        self.experience_values = {
+            'standard' : 5,
+            'moderate' : 10,
+            'strong' : 20,
+            'boss' : 50
+        }
+
+        self.damage_numbers = pygame.sprite.Group()
 
 
     def on_init(self): #DO: Calls pygame.init()
@@ -537,26 +713,186 @@ class App(): #DO: Define the main application class
         self.enemies.add(enemy_1, enemy_2,enemy_3) #WB: Add player to the enemy group
         #DO: Walls
         self.load_walls() #DO: calls the load_walls function to load the layer of walls from the tmx file
+
+        #DO: setup the callback for lvling up
+        self.player_stats.set_level_up_callback(self.on_player_level_up)
+        #DO: randomizing inital weapon
+        starting_weapons = ['plasma', 'bubble','laser']
+        random_weapon = random.choice(starting_weapons)
+        self.player_stats.add_weapon(random_weapon)
+        print(random_weapon + " starting")
         return True
- 
+    
+    def on_player_level_up(self):
+        #DO: called when player lvls up
+        self.generate_upgrade_options()
+        self.upgrade_gui_active = True
+        self.game_paused = True
+    
+    def handle_upgrade_selection(self):
+        keys = pygame.key.get_pressed()
+        #DO: Takes 1,2,3 nnumber input and gives you the upgrade selected (also light error handling)
+        if keys[K_1]:
+            self.apply_up(self.upgrade_options[0])
+            self.upgrade_gui_active = False
+            self.game_paused = False
+        elif keys[K_2] and len(self.upgrade_options) > 1:
+            self.apply_up(self.upgrade_options[1])
+            self.upgrade_gui_active = False
+            self.game_paused = False
+        elif keys[K_3] and len(self.upgrade_options) > 2:
+            self.apply_up(self.upgrade_options[2])
+            self.upgrade_gui_active = False
+            self.game_paused = False
     def on_event(self, event): #DO: Handle events
         if event.type == pygame.QUIT: #DO: if the user clicks the close button ends program
             self._running = False
-    
-    def on_spawn(self,dt,number_enemies,boss=False): #WB: Makes the enemies spawn in the game 
-        
-        player_x = self.player.rect.centerx #WB: Gets the player's x position first as the position of the enemy always depends on the player's
-        player_y = self.player.rect.centery #WB: Gets the player's y position first as the position of the enemy always depends on the player's
 
-        x = random.randint (player_x - 2500, player_x + 2500) #WB: Makes it so that the enemy can randomly spawn from anywhere between 2500 pixels to the right or to the left of the player
-        y = random.randint (player_y - 2500, player_y + 2500) #WB: Makes it so that the enemy can randomly spawn from anywhere between 2500 pixels up or down from the player
+    def generate_upgrade_options(self):
+        options = []
+#DO:list of stats
+        stat_upgrades = [
+            ('max_health', "Max Health", "+30 HP"),
+            ('move_speed', 'Move Speed', '+10% Speed'),
+            ('damage', 'Damage', '+20% Damage'),
+            ('attack_speed', 'Attack Speed', '+10% Attack Speed'),
+            ('projectile_size', 'Projectile Size', '+20% Size'),
+            ('projectile_speed', 'Projectile Speed', '+20% Speed'),
+            ('crit_chance', 'Crit Chance', '+5% Crit Chance')
+        ]
+    #DO: list of possible weapon upgrades
+        weapon_upgrades = []
+        available_weapons = ['plasma','bubble','laser']
+
+        for weapon in self.player_stats.active_weapons:
+            if self.player_stats.weapon_levels[weapon] < 5:
+                weapon_upgrades.append((weapon, f'{weapon.title()} Lv {self.player_stats.weapon_levels[weapon] +1}', f'Upgrade {weapon}'))
         
-        if len(self.enemies) < number_enemies: #WB: There is always a fixed number of 3 enemies in the game. If the number is lower than 3, it adds more enemies so that the number stays 3.
+        #DO: unowned weapons
+        for weapon in available_weapons:
+            if weapon not in self.player_stats.active_weapons and len(self.player_stats.active_weapons) < 3:
+                weapon_upgrades.append((weapon,f'new: {weapon.title()}', f'Unlock {weapon} weapon' ))
+         #DO: create a list of all options for randomizing
+        all_options = stat_upgrades + weapon_upgrades
+        #DO: picks 3 of the options randomly
+        if len(all_options) > 0:
+            self.upgrade_options = random.sample(all_options,min(3,len(all_options)))
+        else:
+            self.upgrade_options = []
+    def apply_up(self,upgrade):
+        upgrade_type, name, description = upgrade #DO: uses the tuples from earlier
+        success = self.player_stats.upgrade(upgrade_type) #DO: calls the player stats code to check for an upgrade (and to apply it within the player code)
+        if success:
+            if upgrade_type == 'move_speed': 
+                self.player.speed = 300 * self.player_stats.move_speed
+            elif upgrade_type == 'max_health':
+                self.player.health = self.player_stats.current_health
+                self.player.max_health = self.player_stats.max_health
+        return success
+    #DO: annoying part where i actually design a gui
+    def draw_upgrade_gui(self):
+        if not self.upgrade_gui_active:
+            return None
+        #DO: make surface for drawing on
+        overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        overlay.fill((0,0,0,180))
+        self.screen.blit(overlay, (0,0))
+        #DO: panel vars
+        panel_width = 600
+        panel_height = 300
+        panel_x = (self.width - panel_width) // 2
+        panel_y = (self.height - panel_height) // 2
+        pygame.draw.rect(self.screen, (30,30,40), (panel_x, panel_y, panel_width, panel_height))
+        pygame.draw.rect(self.screen,(255,255,255), (panel_x,panel_y,panel_width,panel_height),2)
+
+        #DO: title text
+        font =pygame.font.Font(None, 36)
+        title_text = font.render("LEVEL UP! Choose an Upgrade", True, (255,215,0))
+        self.screen.blit(title_text,(self.width // 2 - title_text.get_width() // 2, panel_y +20))
+        
+        #DO: Upgrade selectoin
+        option_font = pygame.font.Font(None, 24)
+        key_font = pygame.font.Font(None, 32)
+        option_width = 180
+        spacing = 20
+        start_x = (self.width - (option_width * 3 + spacing *2)) //2
+       #DO: generates the options on the gui
+        for i, (upgrade_type, name, description) in enumerate(self.upgrade_options):
+            option_x = start_x + i * (option_width + spacing)
+            option_y = panel_y + 80
+            
+            #DO: Option background
+            pygame.draw.rect(self.screen, (60, 60, 80), (option_x, option_y, option_width, 120))
+            pygame.draw.rect(self.screen, (255, 255, 255), (option_x, option_y, option_width, 120), 2)
+            
+            # DO: labeling
+            key_label = key_font.render(f"[{i+1}]", True, (255, 215, 0))
+            self.screen.blit(key_label, (option_x + 10, option_y + 10))
+            
+            # DO: Option text
+            name_text = option_font.render(name, True, (255, 255, 255))
+            desc_text = option_font.render(description, True, (200, 200, 200))
+            
+            self.screen.blit(name_text, (option_x + option_width // 2 - name_text.get_width() // 2, option_y + 50))
+            self.screen.blit(desc_text, (option_x + option_width // 2 - desc_text.get_width() // 2, option_y + 80))
+    
+    
+    def draw_hud(self):
+        # DO: Health bar
+        health_percentage = self.player.health / self.player.max_health
+        health_width = 200
+        pygame.draw.rect(self.screen, (50, 50, 50), (20, 20, health_width, 20))
+        pygame.draw.rect(self.screen, (255, 50, 50), (20, 20, int(health_width * health_percentage), 20))
+        pygame.draw.rect(self.screen, (255, 255, 255), (20, 20, health_width, 20), 2)
+        
+        # DO: Health text
+        font = pygame.font.Font(None, 24)
+        health_text = font.render(f"HP: {int(self.player.health)}/{self.player.max_health}", True, (255, 255, 255))
+        self.screen.blit(health_text,(230,20))
+
+        #DO: level tracking text
+        level_text = font.render(f"Lvl: {self.player_stats.level}", True, (255, 255, 255))
+        exp_text = font.render(f"EXP: {self.player_stats.exp}/{self.player_stats.exp_to_next_level}", True, (100, 200, 255))
+        
+        self.screen.blit(level_text, (20, 50))
+        self.screen.blit(exp_text, (20, 75))
+        
+        
+    def spawn_at_edge(self,enemy_type):  #DO: Spawn enemy at screen edge with random angle
+        #DO: Spawn enemy at screen edge with random angle
+        player_x = self.player.rect.centerx
+        player_y = self.player.rect.centery
+        
+        #DO: Use screen dimensions for edge spawning
+        screen_width, screen_height = self.size
+        spawn_distance = max(screen_width, screen_height) // 2  # Distance to edge
+        
+        #DO: Generate random angle
+        angle = random.uniform(0, 2 * math.pi)
+        
+        #DO: Calculate position at edge distance
+        enemy_x = player_x + math.cos(angle) * spawn_distance
+        enemy_y = player_y + math.sin(angle) * spawn_distance
+        
+        return Enemy(enemy_x, enemy_y, enemy_type)
+    
+    def on_spawn(self,number_enemies,boss=False): #WB: Makes the enemies spawn in the game 
+
+        if len(self.enemies) < number_enemies: #WB: There is always a fixed number of x enemies in the game. If the number is lower than 3, it adds more enemies so that the number stays 3.
             chance = random.random() #WB: Randomly selects the enemy to add to the game based on probability     
             #WB: Each enemy has a likely or less likely chance to appear on screen
-            
+            #DO: Base enemy health
+            base_health ={
+                'standard' : 40,
+                'moderate' : 60,
+                'strong' : 70,
+                'boss' : 250
+            }
+
+            time_scaling = min(pygame.time.get_ticks() / 900000, 4.)
+            health_multiplier = 1 + time_scaling * 1.5
             if boss == True:
-                enemy_type = "strong"
+                enemy_type = "boss"
             elif chance < 0.6:        #WB: Standard enemies have a more likely chance to appear on screen (60%)
                     enemy_type = "standard"
             elif chance < 0.85:       #WB: Moderate enemies have a 25% chance to appear 
@@ -564,50 +900,105 @@ class App(): #DO: Define the main application class
             else:
                 enemy_type = "strong" #WB: Strong enemies have a 15% chance to appear as they are harder to kill
 
-            new_enemy = Enemy(x, y, enemy_type) #WB: Creates a variable to add the new enemy
+            new_enemy = self.spawn_at_edge(enemy_type) #WB: Creates a variable to add the new enemy
+            base_hp = base_health[enemy_type]
+            new_enemy.max_health = base_hp * health_multiplier
+            new_enemy.health = new_enemy.max_health
+            
             self.enemies.add(new_enemy) #WB: Adds the new enemy to the enemies group
             self.all_sprites.add(new_enemy) #WB: Adds the new enemy to the all sprites group
 
+    def resolve_enemy_overlaps(self):
+        #DO:Enemies are overlapping this is unacceptable
+        enemies_list = list(self.enemies) #DO: list of evil guys
+
+        for i ,enemy1 in enumerate(enemies_list):
+            for enemy2 in enemies_list[i+1:]:
+                if enemy1.rect.colliderect(enemy2.rect):
+                    overlap = enemy1.rect.clip(enemy2.rect) #DO: creates a rectangle based on the "clip" or overlap of the existing rectangnles
+                    
+                    #DO: push amount based on centres
+                    dx = enemy1.rect.centerx - enemy2.rect.centerx
+                    dy = enemy1.rect.centery - enemy2.rect.centery
+                    
+                    if dx == 0 and dy == 0:
+                        dx, dy = 1, 0  # Default push right
+                    
+                    # Normalize
+                    distance = math.sqrt(dx*dx + dy*dy)
+                    if distance > 0:
+                        dx, dy = dx/distance, dy/distance
+                        
+                        # Push based on overlap size (more overlap = stronger push)
+                        push_strength = min(overlap.width, overlap.height) * 0.5
+                        push_strength = max(2, min(10, push_strength))  # Clamp between 2-10
+                        
+                        enemy1.rect.x += dx * push_strength
+                        enemy1.rect.y += dy * push_strength
+                        enemy2.rect.x-=dx*push_strength
+                        enemy2.rect.y -= dy*push_strength
+
+    def on_loop(self): #DO: Main loop logic
+        if self.game_paused:
+            if self.upgrade_gui_active:
+                self.handle_upgrade_selection()
+            return
+        current_time = pygame.time.get_ticks()
+        #DO: calculate attack interval based on player stats
+       # attack_interval_1 = self.player_stats.get_attack_interval(self.attack_interval_1_base)
+        #attack_interval_2 = self.player_stats.get_attack_interval(self.attack_interval_2_base)
+
+        #DO: Player movespeed
+        self.player.speed = 300 *self.player_stats.move_speed_multiplier
+        #DO: health regen
+        self.player_stats.current_health = min(self.player_stats.max_health, self.player_stats.current_health +self.player_stats.health_regen *self.dt)
         
+        #DO: sync player stats for health
+       # self.player.health = self.player_stats.current_health
+        self.player.max_health = self.player_stats.max_health
+
+        #DO: if the GUI is up then our player must select 
+        if self.upgrade_gui_active:
+            self.handle_upgrade_selection()
+        #DO: show/update damage numbers
+        self.damage_numbers.update(self.dt)
 
         
-    def on_loop(self): #DO: Main loop logic
-        current_time = pygame.time.get_ticks()
         player_x = self.player.rect.centerx #WB: Gets the player's x position first as the position of the enemy always depends on the player's
         player_y = self.player.rect.centery #WB: Gets the player's y position first as the position of the enemy always depends on the player's
         x = random.randint (player_x - 500, player_x + 500) #WB: Makes it so that the enemy can randomly spawn from anywhere between 500 pixels to the right or to the left of the player
         y = random.randint (player_y - 500, player_y + 500) #WB: Makes it so that the enemy can randomly spawn from anywhere between 500 pixels up or down from the player
-        if current_time - self.shooting_enemy_time > self.shooting_enemy_interval: #WB: Checks if 30 seconds have passed 
-            type_of_enemy = "shooting"     
-            shooting_enemy = Enemy(x, y, type_of_enemy) 
-            self.shooting_enemy_time = current_time #WB: Makes the shooting enemy spawn every 30 seconds
-            self.enemies.add(shooting_enemy) #WB: Adds shooting enemy to the enemies group
-            self.all_sprites.add(shooting_enemy) #WB: Adds shooting enemy to the all sprites group
+       # if current_time - self.shooting_enemy_time > self.shooting_enemy_interval: #WB: Checks if 30 seconds have passed 
+      #      type_of_enemy = "shooting"     
+       ##    self.shooting_enemy_time = current_time #WB: Makes the shooting enemy spawn every 30 seconds
+         #   self.enemies.add(shooting_enemy) #WB: Adds shooting enemy to the enemies group
+          #  self.all_sprites.add(shooting_enemy) #WB: Adds shooting enemy to the all sprites group
 
             #FS: The code responsible for the bullet heaven, enjoy
             #FS: This is entirely customizable. Randomized bullets can be made with pi, multishot can be made with for loops, and altered bullet types are available for use up in the projectile class.
             #FS: Alr Darius, so if you're going to be switching out these bullet types many times per game then you'll want to assign the properties to variables.
             #FS: Not sure how you'll handle them, but here's the template for all of the properties you need at the moment.
-            '''
-            attack_velocity_1 = 0
-            attack_projectile_type_1 = ''
-            attack_damage_value_1 = 0
-            attack_angle_1 = 0 #FS: this one might be a bit harder to implement but yeah.
-            attack_velocity_2 = 0
-            attack_projectile_type_2 = ''   
-            attack_damage_value_2 = 0
-            attack_angle_2 = 0
-            '''
+      #      '''
+       #     attack_velocity_1 = 0
+         #   attack_projectile_type_1 = ''
+          #  attack_damage_value_1 = 0
+         #   attack_angle_1 = 0 #FS: this one might be a bit harder to implement but yeah.
+         ##   attack_velocity_2 = 0
+           # attack_projectile_type_2 = ''   
+        #    attack_damage_value_2 = 0
+         #   attack_angle_2 = 0
             #FS: Also to let you know, attack_interval_1 and attack_interval_2 are defined up in the app init function.
             #FS: They are currently set to 250ms and 1000ms respectively, but you can change them as needed.
 
-        if current_time - self.attack_time1 > self.attack_interval_1: #FS: Handles the attack interval for the first shot type
+        '''if current_time - self.attack_time1 > self.attack_interval_1: #FS: Handles the attack interval for the first shot type
             self.attack_time1 = current_time
             # FS: Fires projectile in front of player
             direction = self.player.current_direction
             # FS: Angle: right = 0, left = pi 
-            if direction == 'left': angle = math.pi; 
-            else: angle = 0 
+            if direction == 'left': 
+                angle = math.pi; 
+            else: 
+                angle = 0 
             velocity = 500 #FS: Adjustable velocity
             projectile_type = 'plasma' # FS: depending on the string here, this affects bullet color AND bullet size. maybe... even shape?
             damage_value = 10
@@ -622,8 +1013,17 @@ class App(): #DO: Define the main application class
             for i in range(num_shots):
                 angle = i * (2 * math.pi) / num_shots
                 self.player.player_projectile(velocity, angle, projectile_type, damage_value)
-            #FS: If you want to add even more, feel free because its just straight up copy paste from above. 
-    
+            #FS: If you want to add even more, feel free because its just straight up copy paste from above. '''
+ #DO: autofire all active weapons
+        for weapon_type in self.player_stats.active_weapons:
+            if self.player_stats.can_shoot_weapon(weapon_type, current_time):
+                self.player_stats.mark_weapon_shot(weapon_type,current_time)
+                projectiles = self.shoot_weapon(weapon_type)
+                for projectile in projectiles:
+                    for group in self.player.groups():
+                        group.add(projectile)
+
+
         self.player.update(self.dt,self.collision_rects) #DO: Player logic that makes walls work, likely will also later work with enemy collisions
         for sprite in self.all_sprites:
             if isinstance(sprite, Projectile): #DO: parses all sprites in all_sprites and runs the regular code for that sprite if its a projectile.
@@ -634,7 +1034,7 @@ class App(): #DO: Define the main application class
             
 
         
-        #Checks for player-enemy collisions
+        #DO: Checks for player-enemy collisions
         for enemy in self.enemies:
                 if isinstance (enemy, Enemy): #WB: Handles the case where the enemy hits the player
                     if enemy.rect.colliderect(self.player.rect) and not self.player.invincible: #DO: Player has not been hit in the last half a second
@@ -647,22 +1047,22 @@ class App(): #DO: Define the main application class
                     if self.player.health <= 0: 
                         self.player.kill() #WB: Removes the player from the game
                         print("Player killed!")
-                        break  #DO: exit the for loop upon death
+                        exit() #DO: exit the for loop upon death
 
         #Checks for player-projectile enemy collisons
-        for projectile in self.all_sprites: 
-            if isinstance(projectile, Projectile):
-                if projectile.owner_id != id(self.player): #WB: Checks if the projectile came from the enemy
-                    if self.player.rect.colliderect(projectile.rect): #WB: Checks if the enemy projectile collided with the player
-                        self.player.health -= projectile.damage_value #WB: When the player is hit, it loses health points associated with the damage value of the projectile used
-                        print (f"Player hit! Health: {self.player.health}")
-                        projectile.kill() #WB: Remomes the projectile from the game
+       # for projectile in self.all_sprites: 
+        #    if isinstance(projectile, Projectile):
+       #         if projectile.owner_id != id(self.player): #WB: Checks if the projectile came from the enemy
+       # #           if self.player.rect.colliderect(projectile.rect): #WB: Checks if the enemy projectile collided with the player
+        #                self.player.health -= projectile.damage_value #WB: When the player is hit, it loses health points associated with the damage value of the projectile used
+           #             print (f"Player hit! Health: {self.player.health}")
+           #             projectile.kill() #WB: Remomes the projectile from the game
 
-                        #WB: Checks if player is dead
-                        if  player.health <= 0:
-                            player.kill()  #WB: Removes the player from the game
-                            print("Player killed!")
-                            break #WB: exit the loop upon death
+           #             #WB: Checks if player is dead
+           #             if  player.health <= 0:
+            #                player.kill()  #WB: Removes the player from the game
+       #                     print("Player killed!")
+        #                    break #WB: exit the loop upon death
 
         #Checks for projectile-enemy collisions
         for enemy in self.enemies:
@@ -671,23 +1071,94 @@ class App(): #DO: Define the main application class
                     if enemy.rect.colliderect(projectile.rect):
                         enemy.health -= projectile.damage_value #WB: When the enemy is hit by a projectile, it loses health points associated with the damage value of the projectile used
                         print(f"Enemy hit! Health: {enemy.health}")  
+                        damage_num = DamageNumber(
+                            enemy.rect.centerx,
+                            enemy.rect.top,
+                            projectile.damage_value,
+                            #DO: id is just incase anything is added that also does damage in the future to show distinction, unlikely to actually matter however
+                            colour =(255,100,100) if projectile.owner_id == id(self.player) else (100,100,225)
+                        )
+                        self.damage_numbers.add(damage_num)
                         projectile.kill() #WB: Gets rid of the projectible in the game
 
                         #WB: Checks if enemy is dead
                         if enemy.health <= 0:
+                            exp_value = self.experience_values.get(enemy.enemy_type,5)
+                            self.player_stats.add_exp(exp_value)
+                            print(f'{exp_value} XP awards')
                             enemy.kill() #WB: Removes enemy from game
                             print("Enemy defeated!")
-
-        self.on_spawn(self.dt,3) #WB: Makes the enemies spawn 
+        #DO: actual implementation of health regen per tick
+        self.player.health = min(self.player.max_health, self.player.health + self.player_stats.health_regen * self.dt)
+        print(self.player.health)
+        self.on_spawn(3) #WB: Makes the enemies spawn 
+        self.resolve_enemy_overlaps()
         
 
 
+    def shoot_weapon(self,weapon_type):
+        #DO: shoots differently depending on weapon 
+        if weapon_type == 'plasma':
+            #DO: thanks FS ill be using ur thing as a frame work for this
+            direction = self.player.current_direction
+            if direction == 'left':
+                angle = math.pi
+            else:
+                angle = 0
+            velocity = 800 * self.player_stats.projectile_speed_multiplier
+            base_damage = self.player_stats.get_weapon_damage('plasma')
+            damage_value, is_crit = self.player_stats.calculate_damage(base_damage)
+            #DO: crit, base damage, and bullet velocity
+            projectile = self.player.player_projectile(velocity, angle, 'plasma', damage_value)
 
+            #DO: if crit show that !
+            if is_crit: projectile.image.fill((255,255,100))
+
+            return [projectile]
+        elif weapon_type == 'bubble':
+            velocity = 1000 * self.player_stats.projectile_speed_multiplier
+            base_damage = self.player_stats.get_weapon_damage('bubble')
+            num_shots = 8 + self.player_stats.weapon_levels['bubble'] * 2
+            
+            #DO: we get more shots per level for MR. bubbly
+            projectiles = []
+            for i in range(num_shots):
+                angle = i*(2*math.pi) / num_shots
+                damage_value,is_crit = self.player_stats.calculate_damage(base_damage)
+                projectile = self.player.player_projectile(velocity, angle, 'bubble', damage_value)
+                projectiles.append(projectile)
+            return projectiles
+        elif weapon_type == 'laser':
+            direction = self.player.current_direction
+            if direction == 'left': 
+                angle = math.pi
+            else: 
+                angle = 0 
+            velocity = 500 * self.player_stats.projectile_speed_multiplier
+            base_damage = self.player_stats.get_weapon_damage('laser')
+            damage_value, is_crit = self.player_stats.calculate_damage(base_damage)
+            
+            projectile = self.player.player_projectile(velocity, angle, 'laser', damage_value)
+            
+            if is_crit:
+                projectile.image.fill((100, 200, 255))  # Different crit color
+                
+            return [projectile]
+
+        return []
+            
+            
     def on_render(self): #DO: Render the display
         #DO: likely not needed anymore self.screen.fill((50,50,100)) #DO: reset the screen to black
         #self.draw_map(self.tmx_data, self.screen,self.tile_width,self.tile_height)
         #self.all_sprites.draw(self.screen) #DO: Draw all sprites in the all_sprites group to the screen
         self.camera.custom_draw(self.width, self.height, self.player, self.all_sprites, self.screen)
+        for damage_num in self.damage_numbers:
+            offset_pos = damage_num.rect.topleft - self.camera.offset
+            self.screen.blit(damage_num.image, offset_pos)
+        self.draw_hud()
+        self.draw_upgrade_gui()
+        #DO: Layering
         pygame.display.flip() #DO: Update the full display surface to the screen
 
     
