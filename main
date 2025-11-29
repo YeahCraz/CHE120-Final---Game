@@ -617,7 +617,7 @@ class App(): #DO: Define the main application class
             # FS: Changed the shotgun. Enter: a generic ring of 8 bullets!
             velocity = 500 
             projectile_type = 'bubble' 
-            damage_value = 5
+            damage_value = 10
             num_shots = 8
             for i in range(num_shots):
                 angle = i * (2 * math.pi) / num_shots
