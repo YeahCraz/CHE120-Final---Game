@@ -99,7 +99,7 @@ class PlayerStats:
         #DO: adds a weapon to active weapons if below 3 weapons
         if weapon_type not in self.active_weapons and len(self.active_weapons) <3:
             self.active_weapons.append(weapon_type)
-            self.weapon_levels[weapon_type] = 1
+            self.weapon_levels[weapon_type] = 1 
             self.weapon_cooldowns[weapon_type] = 0
             return True
         return False
@@ -162,27 +162,28 @@ class PlayerStats:
         #DO: get the base cd for each weapon
         cooldowns = {
             'plasma': 800 - self.weapon_levels['plasma'] * 25, #middle ground
-            'bubble': 1200 ,  #slow and big
-            'laser': 500 - self.weapon_levels['laser'] * 50 #fast
+            'bubble': 1400 ,  #slow and big
+            'laser': 1500 - self.weapon_levels['laser'] * 100 #fast
         }
         return cooldowns.get(weapon_type, 1000)
     def get_weapon_damage(self, weapon_type):
         #DO: get base damage for weapon
         base_damages = {
-            'plasma': 6,
-            'bubble': 5, 
-            'laser': 2
+            'plasma': 7,
+            'bubble': 3, 
+            'laser': 18
         }
         if weapon_type == 'plasma':
-            level_bonus = self.weapon_levels[weapon_type] * 3
+            level_bonus = self.weapon_levels[weapon_type] * 3.5
+        elif weapon_type == 'laser':
+            level_bonus = self.weapon_levels[weapon_type] * 5
         else:
-            level_bonus = self.weapon_levels[weapon_type] * 2
+            level_bonus = self.weapon_levels[weapon_type] * 1.5
         return base_damages.get(weapon_type,10) + level_bonus
     def can_shoot_weapon(self, weapon_type, current_time):
         #DO: checks if weapon can shoot 
         if weapon_type not in self.active_weapons:
             return False
-            
         base_cooldown = self.get_weapon_cooldown(weapon_type)
         actual_cooldown = self.get_attack_interval(base_cooldown)
         last_shot = self.weapon_cooldowns.get(weapon_type, 0)
@@ -434,7 +435,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #WB: Define standard enemy's powers
             self.health = 40 #WB: Define standard enemy's health
             self.max_health = 40
-            self.damage = 1 #WB: Define standard enemy's damage
+            self.damage = 8 #WB: Define standard enemy's damage
             
             #WB: Define standard enemy's dimensions
             self.sprite_width = 32 #WB: Define standard enemy's width 
@@ -458,7 +459,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #WB: Define moderate enemy powers
             self.health = 60 #WB: Define moderate enemy's health
             self.max_health = 60
-            self.damage = 30 #WB: Define moderate enemy's damage
+            self.damage = 15 #WB: Define moderate enemy's damage
 
             #WB: Define moderate enemy's dimensions
             self.sprite_width = 50 #WB: Define moderate enemy's width 
@@ -482,7 +483,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             #WB: Define strong enemy's powers
             self.health = 70 #WB: Define strong enemy's health
             self.max_health = 70
-            self.damage = 35 #WB: Define strong enemy's damage 
+            self.damage = 25 #WB: Define strong enemy's damage 
             
 
             #WB: Define strong enemy's dimensions
@@ -646,6 +647,7 @@ class App(): #DO: Define the main application class
         self._running = True #DO: Set running equal to true for while loop in game logic
         self.screen = None #DO: Placeholder for screen object
         self.clock = pygame.time.Clock() #DO: Create a clock object to manage frame rate 
+        self.game_start_time = pygame.time.get_ticks() #DO: initalize the tracking of game time
         self.width = 1109
         self.height = 624
         self.size = self.width, self.height  #initalize screen size
@@ -689,7 +691,7 @@ class App(): #DO: Define the main application class
 
         self.damage_numbers = pygame.sprite.Group()
 
-
+    
     def on_init(self): #DO: Calls pygame.init()
         pygame.init()
         self.screen = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.DOUBLEBUF) #DO: creates display
@@ -747,9 +749,24 @@ class App(): #DO: Define the main application class
     def on_event(self, event): #DO: Handle events
         if event.type == pygame.QUIT: #DO: if the user clicks the close button ends program
             self._running = False
-
+    def get_game_time_minutes(self):
+        #DO: how many minutes has it been since game began?
+        return (pygame.time.get_ticks() - self.game_start_time) / 60000. #DO: conversion of ms to min
+    
+    def calculate_enemy_health(self, base_health):
+        game_time_minutes = self.get_game_time_minutes()
+        time_factor = min(game_time_minutes / 30, 3.0)  # Cap at 3x health
+        return base_health * (1 + time_factor)
+# Enemy spawn rates should also evolve
+    def get_enemy_spawn_weights(self):
+        game_time_minutes = self.get_game_time_minutes()
+        if game_time_minutes < 5:
+            return {'standard': 0.7, 'moderate': 0.25, 'strong': 0.05}
+        elif game_time_minutes < 15:
+            return {'standard': 0.5, 'moderate': 0.35, 'strong': 0.15}
+        else:
+            return {'standard': 0.3, 'moderate': 0.4, 'strong': 0.3}
     def generate_upgrade_options(self):
-        options = []
 #DO:list of stats
         stat_upgrades = [
             ('max_health', "Max Health", "+30 HP"),
@@ -784,7 +801,7 @@ class App(): #DO: Define the main application class
         success = self.player_stats.upgrade(upgrade_type) #DO: calls the player stats code to check for an upgrade (and to apply it within the player code)
         if success:
             if upgrade_type == 'move_speed': 
-                self.player.speed = 300 * self.player_stats.move_speed
+                self.player.speed = 300 * self.player_stats.move_speed_multiplier
             elif upgrade_type == 'max_health':
                 self.player.health = self.player_stats.current_health
                 self.player.max_health = self.player_stats.max_health
@@ -881,6 +898,8 @@ class App(): #DO: Define the main application class
         if len(self.enemies) < number_enemies: #WB: There is always a fixed number of x enemies in the game. If the number is lower than 3, it adds more enemies so that the number stays 3.
             chance = random.random() #WB: Randomly selects the enemy to add to the game based on probability     
             #WB: Each enemy has a likely or less likely chance to appear on screen
+            weights = self.get_enemy_spawn_weights()
+            enemy_type = random.choices(list(weights.keys()), weights=list(weights.values()))[0]
             #DO: Base enemy health
             base_health ={
                 'standard' : 40,
@@ -888,21 +907,11 @@ class App(): #DO: Define the main application class
                 'strong' : 70,
                 'boss' : 250
             }
-
-            time_scaling = min(pygame.time.get_ticks() / 900000, 4.)
-            health_multiplier = 1 + time_scaling * 1.5
             if boss == True:
-                enemy_type = "boss"
-            elif chance < 0.6:        #WB: Standard enemies have a more likely chance to appear on screen (60%)
-                    enemy_type = "standard"
-            elif chance < 0.85:       #WB: Moderate enemies have a 25% chance to appear 
-                    enemy_type = "moderate"
-            else:
-                enemy_type = "strong" #WB: Strong enemies have a 15% chance to appear as they are harder to kill
-
+                enemy_type = 'boss'
             new_enemy = self.spawn_at_edge(enemy_type) #WB: Creates a variable to add the new enemy
             base_hp = base_health[enemy_type]
-            new_enemy.max_health = base_hp * health_multiplier
+            new_enemy.max_health = self.calculate_enemy_health(base_hp)
             new_enemy.health = new_enemy.max_health
             
             self.enemies.add(new_enemy) #WB: Adds the new enemy to the enemies group
@@ -944,6 +953,16 @@ class App(): #DO: Define the main application class
                 self.handle_upgrade_selection()
             return
         current_time = pygame.time.get_ticks()
+        game_time_minutes = self.get_game_time_minutes()
+        if game_time_minutes >= 5 and not hasattr(self, 'first_boss_spawned'):
+            self.on_spawn(1,boss=True)
+            self.first_boss_spawned = True
+        elif game_time_minutes >= 12 and not hasattr(self,'second_boss_spawned'):
+            self.on_spawn(1,boss=True)
+            self.second_boss_spawned = True
+        elif game_time_minutes >= 25 and not hasattr(self,'third_boss_spawned'):
+            self.on_spawn(1,boss=True)
+            self.third_boss_spawned = True
         #DO: calculate attack interval based on player stats
        # attack_interval_1 = self.player_stats.get_attack_interval(self.attack_interval_1_base)
         #attack_interval_2 = self.player_stats.get_attack_interval(self.attack_interval_2_base)
@@ -1091,9 +1110,33 @@ class App(): #DO: Define the main application class
         #DO: actual implementation of health regen per tick
         self.player.health = min(self.player.max_health, self.player.health + self.player_stats.health_regen * self.dt)
         print(self.player.health)
-        self.on_spawn(3) #WB: Makes the enemies spawn 
-        self.resolve_enemy_overlaps()
+        game_time_minutes = self.get_game_time_minutes()
+        #DO: Basic enemy progression
+        if game_time_minutes < 1:
+            self.on_spawn(4)
+        elif game_time_minutes < 2:
+            self.on_spawn(6)  # Keep 5 enemies
+        elif game_time_minutes < 5:
+            self.on_spawn(8)  # Keep 8 enemies
+        elif game_time_minutes < 10:
+            self.on_spawn(12) # Keep 12 enemies
+        elif game_time_minutes < 15:
+            self.on_spawn(15) # Keep 15 enemies
+        else:
+            self.on_spawn(20) # Keep 20 enemies
         
+        # Boss spawn spikes - triple enemies 1 minute before bosses
+        if 4 <= game_time_minutes < 5 and not hasattr(self, 'first_boss_spike'):
+            self.on_spawn(25)  # Spike to 25 enemies
+            self.first_boss_spike = True
+        if 11 <= game_time_minutes < 12 and not hasattr(self, 'second_boss_spike'):
+            self.on_spawn(35)  # Spike to 35 enemies
+            self.second_boss_spike = True#WB: Makes the enemies spawn 
+        if 24 <= game_time_minutes < 25 and not hasattr(self, 'third_boss_spike'):
+            self.on_spawn(45)  # Spike to 45 enemies
+            self.third_boss_spike = True
+        self.resolve_enemy_overlaps()
+            
 
 
     def shoot_weapon(self,weapon_type):
@@ -1118,7 +1161,7 @@ class App(): #DO: Define the main application class
         elif weapon_type == 'bubble':
             velocity = 1000 * self.player_stats.projectile_speed_multiplier
             base_damage = self.player_stats.get_weapon_damage('bubble')
-            num_shots = 8 + self.player_stats.weapon_levels['bubble'] * 2
+            num_shots = 6 + self.player_stats.weapon_levels['bubble'] * 2
             
             #DO: we get more shots per level for MR. bubbly
             projectiles = []
@@ -1131,19 +1174,27 @@ class App(): #DO: Define the main application class
         elif weapon_type == 'laser':
             direction = self.player.current_direction
             if direction == 'left': 
-                angle = math.pi
+                base_angle = math.pi
             else: 
-                angle = 0 
-            velocity = 500 * self.player_stats.projectile_speed_multiplier
+                base_angle = 0 
+            velocity = 2000 * self.player_stats.projectile_speed_multiplier
             base_damage = self.player_stats.get_weapon_damage('laser')
             damage_value, is_crit = self.player_stats.calculate_damage(base_damage)
+            num_shots = min(4,1+ self.player_stats.weapon_levels['laser']) #DO: caps the bullets shot at 4
+            spread_angle = math.radians(10)
             
-            projectile = self.player.player_projectile(velocity, angle, 'laser', damage_value)
+            projectiles = []
+            for i in range(num_shots):
+                angle_offset = spread_angle * (i - (num_shots - 1) / 2)
+                angle = base_angle + angle_offset
             
-            if is_crit:
-                projectile.image.fill((100, 200, 255))  # Different crit color
-                
-            return [projectile]
+                damage_value, is_crit = self.player_stats.calculate_damage(base_damage)
+                projectile = self.player.player_projectile(velocity, angle, 'laser', damage_value)
+            
+                if is_crit:
+                    projectile.image.fill((255, 100, 100))
+                projectiles.append(projectile)
+            return projectiles
 
         return []
             
