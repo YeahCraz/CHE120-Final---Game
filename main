@@ -45,7 +45,7 @@ class PlayerStats:
         #DO: lvls related stats
         self.level = 1
         self.exp = 0
-        self.exp_to_next_level = 10
+        self.exp_to_next_level = 30
         self.available_upgrade_points = 0
         self.total_exp_gained = 0
         self.on_level_up = None
@@ -74,21 +74,23 @@ class PlayerStats:
         self.weapon_cooldowns = {}
 
     def add_exp(self,amount):
-        self.exp+=amount *self.exp_growth
-        self.total_exp_gained += amount * self.exp_growth
+        #DO: this should address the seemingly horrid scaling curve cause holy
+        level_penalty = max(0.5, 1.0 - (self.level - 1) * 0.05)
+        adjusted_amount = amount * self.exp_growth * level_penalty #DO: penalize at higher levels to make levels mean something and so you dont get spam upgrades.
+        self.exp += adjusted_amount
+        self.total_exp_gained += adjusted_amount
         
-        #DO: if we lvl up
         while self.exp >= self.exp_to_next_level:
             self.level_up()
     def level_up(self):
         self.exp -=self.exp_to_next_level
         self.level += 1
         self.available_upgrade_points +=1
-        self.exp_to_next_level = int(self.exp_to_next_level *1.5)
+        self.exp_to_next_level = int(self.exp_to_next_level *1.24)
 
         #DO: small stat increases so you dont fall too behind if you choose another path for these important stats
-        self.max_health = int(self.max_health*1.1)
-        self.base_damage = int(self.base_damage*1.05)
+        self.max_health = int(self.max_health*1.08)
+        self.base_damage = int(self.base_damage*1.04)
 
         if self.on_level_up:
             self.on_level_up()
@@ -116,22 +118,22 @@ class PlayerStats:
         self.available_upgrade_points -=1
 
         if upgrade_type == 'max_health':
-            self.max_health +=30
+            self.max_health +=25
             self.current_health +=30
         elif upgrade_type == 'move_speed':
-            self.move_speed_multiplier +=0.1
+            self.move_speed_multiplier +=0.08
         elif upgrade_type == 'health_regen':
-            self.health_regen +=0.4
+            self.health_regen +=0.3
         elif upgrade_type == "damage":
             self.damage_multiplier += 0.2
         elif upgrade_type == "attack_speed":
-            self.cooldown_reduction *= 0.9
+            self.cooldown_reduction *= 0.95
         elif upgrade_type == "projectile_size":
             self.projectile_size += 0.2
         elif upgrade_type == 'exp_growth':
             self.exp_growth += 0.1
         elif upgrade_type == 'projectile_speed':
-            self.projectile_speed_multiplier +=2
+            self.projectile_speed_multiplier +=.2
         elif upgrade_type == 'crit_chance':
             self.crit_chance = min(1.,self.crit_chance +0.05) #DO: cant exceed 100% crit
         elif upgrade_type in ['plasma', 'bubble', 'laser']:
@@ -161,24 +163,24 @@ class PlayerStats:
     def get_weapon_cooldown(self,weapon_type):
         #DO: get the base cd for each weapon
         cooldowns = {
-            'plasma': 800 - self.weapon_levels['plasma'] * 25, #middle ground
-            'bubble': 1400 ,  #slow and big
-            'laser': 1500 - self.weapon_levels['laser'] * 100 #fast
+            'plasma': 700 - min(self.weapon_levels['plasma'],3) * 100, #fast capped at 400
+            'bubble': 1200 - min(self.weapon_levels['bubble'],4) * 150,  #slow and big capped at 600
+            'laser': 1400 - min(self.weapon_levels['laser'],2) * 200#sniper gets capped at 1000
         }
-        return cooldowns.get(weapon_type, 1000)
+        return max(200,cooldowns.get(weapon_type, 1000))
     def get_weapon_damage(self, weapon_type):
         #DO: get base damage for weapon
         base_damages = {
-            'plasma': 7,
-            'bubble': 3, 
-            'laser': 18
+            'plasma': 8,
+            'bubble': 4, 
+            'laser': 15
         }
         if weapon_type == 'plasma':
-            level_bonus = self.weapon_levels[weapon_type] * 3.5
+            level_bonus = self.weapon_levels[weapon_type] * 3
         elif weapon_type == 'laser':
-            level_bonus = self.weapon_levels[weapon_type] * 5
+            level_bonus = self.weapon_levels[weapon_type] * 6
         else:
-            level_bonus = self.weapon_levels[weapon_type] * 1.5
+            level_bonus = self.weapon_levels[weapon_type] * 2
         return base_damages.get(weapon_type,10) + level_bonus
     def can_shoot_weapon(self, weapon_type, current_time):
         #DO: checks if weapon can shoot 
@@ -258,7 +260,7 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         #DO: Define sprite dimensions
         self.sprite_width = 65 #DO: Define the width of a single sprite
         self.sprite_height = 65 #DO: Define the height of a single sprite
-        self.speed = 300. #DO: Define player speed in pixels per second
+        self.speed = 350. #DO: Define player speed in pixels per second
 
         #DO: Define animation properties
         self.current_frame = 0 #DO: Current frame of animation, used in cycling through frames in animation
@@ -288,6 +290,10 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         #DO: creates the image attribute for the sprite
         self.image = self.idle_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
         self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection 
+
+        #DO: collision are not working as ideally as i'd like cause of the transparent background
+        self.mask = pygame.mask.from_surface(self.image)
+
         
 
     def load_frames(self, sheet, row, start_col, num_frames, flip_horizontal=False, append_reverse = False): #DO: Function to load frames from the sprite sheet
@@ -317,7 +323,6 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         if keys[K_UP] or keys[K_w] or keys[K_DOWN] or keys[K_s]: #DO: Check for up or down movement keys. Up and down dont affect animation.
             self.moving = True
         
-        
         #DO:changes direction if the player is moving, i.e. we begin moving in another direction
         if self.moving:
             self.current_direction = new_direction
@@ -342,15 +347,19 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         if keys[K_LSHIFT]: #FS: Check for movement with shift, for focus movement
             dx *= 0.75 #+ focus_factor #FS: Potentially, these factors can be altered with upgrades/options.
             dy *= 0.75 #+ focus_factor
-            # FS: Seems to currently break downwards + right movement.
+       ##f dx != 0 and dy != 0: #DO: If both dx and dy are non-zero, we are moving diagonally
+         #  dist = math.sqrt(dx*dx + dy*dy) #DO: takes the norm of the diagonal vector
+         #  if dist > 0:
+         #      dx = dx / dist * self.speed * dt #DO: dx / hypotenuse * speed * delta time
+         #      dy = dy / dist * self.speed * dt# FS: Seems to currently break downwards + right movement.
         #DO: recall that y is inverted in pygame, so moving up decreases y value, moving down increases y value
         #DO: also naturally given that direction is changed by +- self.speed * dt left and right would oppose each other and stop movement if both keys are pressed simultaneously
         #DO: to handle diagonals, we can change the speed of dx by a defined amount
-        if dx != 0 and dy != 0: #DO: If both dx and dy are non-zero, we are moving diagonally
-           dist = math.sqrt(dx*dx + dy*dy) #DO: takes the norm of the diagonal vector
-           if dist > 0:
-               dx = dx / dist * self.speed * dt #DO: dx / hypotenuse * speed * delta time
-               dy = dy / dist * self.speed * dt
+       
+           #dist = math.sqrt(dx*dx + dy*dy) #DO: takes the norm of the diagonal vector
+           #if dist > 0:
+            #   dx = dx / dist * self.speed * dt #DO: dx / hypotenuse * speed * delta time
+             #  dy = dy / dist * self.speed * dt
         #DO:"hitbox" created by rect attribute
         #DO: intifying from a float
         #DO: Wall Collision
@@ -409,6 +418,7 @@ class Player(pygame.sprite.Sprite): #DO: Define a player class
         self.movement(dt,collision_rects)
         self.animation(dt)
         self.update_invinciblity(dt)
+        self.mask = pygame.mask.from_surface(self.image)
 
     #FS: Fire a projectile from the player
     def player_projectile(self, velocity, angle, projectile_type, damage_value):
@@ -462,18 +472,18 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             self.damage = 15 #WB: Define moderate enemy's damage
 
             #WB: Define moderate enemy's dimensions
-            self.sprite_width = 50 #WB: Define moderate enemy's width 
-            self.sprite_height = 60 #WB: Define moderate enemy's height
+            self.sprite_width = 64 #WB: Define moderate enemy's width 
+            self.sprite_height = 64 #WB: Define moderate enemy's height
             self.speed = 210 #WB: Define moderate enemy's speed (slower than player but faster than standard)
             
             #WB: Loading sprite sheet, it can viewed in ""
-            self.walk_sheet = pygame.image.load('Slime\slime-Sheet.png').convert_alpha() #WB: Load the sprite sheet image
+            self.walk_sheet = pygame.image.load('Bat_Fly.png').convert_alpha() #WB: Load the sprite sheet image
                 
             #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
             #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
             self.walk_frames = {
-            "left": self.load_frames(self.walk_sheet, 0, 0, 4, False, True, 2), #WB: Loads animation for walking left
-            "right": self.load_frames(self.walk_sheet, 0, 0, 4, True, True, 2) #WB: Loads animation for walking right 
+            "left": self.load_frames(self.walk_sheet, 0, 0, 4, False, True, 3), #WB: Loads animation for walking left
+            "right": self.load_frames(self.walk_sheet, 0, 0, 4, True, True, 3) #WB: Loads animation for walking right 
             }
             #DO: creates the image attribute for the sprite
             self.image = self.walk_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
@@ -487,22 +497,24 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
             
 
             #WB: Define strong enemy's dimensions
-            self.sprite_width = 80 #WB: Define the width of the strong enemy
-            self.sprite_height = 80 #WB: Define the width of the strong enemy
+            self.sprite_width = 64 #WB: Define the width of the strong enemy
+            self.sprite_height = 64 #WB: Define the width of the strong enemy
             self.speed = 200 #WB: Define the speed of the strong enemy (slightly slower than player)
            
             #WB: Loading sprite sheet, it can viewed in ""
-            self.walk_sheet = pygame.image.load('Slime\slime-Sheet.png').convert_alpha() #WB: Load the sprite sheet image
+            self.walk_sheet = pygame.image.load('Golem_Run.png').convert_alpha() #WB: Load the sprite sheet image
                 
             #WB: Parameters for functions within the dictionary (same as the player's): load_frames(self, row, start_col, num_frames, flip_horizontal=False):
             #DO: when calling the function, we specify which row of the sprite sheet to use, which column to start from, and how many frames to load, and whether to flip the image horizontally. We dont need to assign self as the first argument is made automatically when calling a method with an object.
             self.walk_frames = {
-            "left": self.load_frames(self.walk_sheet, 0, 0, 4, False, True, 2), #WB: Loads animation for walking left
-            "right": self.load_frames(self.walk_sheet, 0, 0, 4, True, True, 2) #WB: Loads animation for walking right 
+            "left": self.load_frames(self.walk_sheet, 0, 0, 4, False, True, 4), #WB: Loads animation for walking left
+            "right": self.load_frames(self.walk_sheet, 0, 0, 4, True, True, 4) #WB: Loads animation for walking right 
             }
             #DO: creates the image attribute for the sprite
             self.image = self.walk_frames[self.current_direction][self.current_frame] #DO: sets the initial image of the sprite to the first frame of the current direction's animation
             self.rect = self.image.get_rect(center = (x, y)) #DO: this provide a rectangle around the sprite for collision detection 
+
+            self.mask = pygame.mask.from_surface(self.image)
 
         elif enemy_type == "boss": #WB: Shooting type of enemy 
             #WB: Define shooting enemy's powers
@@ -597,6 +609,8 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
     def update(self, dt, player_rect): 
         self.movement(player_rect, dt) #WB: Updates the enemy's movements
         self.enemy_animations(dt) #WB: Calls the animation method
+        if hasattr(self, 'walk_frames'): #DO: mark doesnt have these
+            self.mask = pygame.mask.from_surface(self.image)
         
 '''  if self.enemy_type == 'shooting': #WB: Checks the enemy type
             current_time= pygame.time.get_ticks() #WB: Keeps track of the time by assigning it to a variable
@@ -755,9 +769,9 @@ class App(): #DO: Define the main application class
     
     def calculate_enemy_health(self, base_health):
         game_time_minutes = self.get_game_time_minutes()
-        time_factor = min(game_time_minutes / 30, 3.0)  # Cap at 3x health
-        return base_health * (1 + time_factor)
-# Enemy spawn rates should also evolve
+        time_factor = min(game_time_minutes / 10, 4.0)  
+        return base_health * (1 + time_factor * 1.5)
+#DO: nemy spawn rates should also evolve
     def get_enemy_spawn_weights(self):
         game_time_minutes = self.get_game_time_minutes()
         if game_time_minutes < 5:
@@ -769,14 +783,17 @@ class App(): #DO: Define the main application class
     def generate_upgrade_options(self):
 #DO:list of stats
         stat_upgrades = [
-            ('max_health', "Max Health", "+30 HP"),
-            ('move_speed', 'Move Speed', '+10% Speed'),
-            ('damage', 'Damage', '+20% Damage'),
-            ('attack_speed', 'Attack Speed', '+10% Attack Speed'),
-            ('projectile_size', 'Projectile Size', '+20% Size'),
-            ('projectile_speed', 'Projectile Speed', '+20% Speed'),
-            ('crit_chance', 'Crit Chance', '+5% Crit Chance')
-        ]
+            ('max_health', "Max Health", "+25 HP"),  
+            ('move_speed', 'Move Speed', '+8% Speed'),  
+            ('damage', 'Damage', '+15% Damage'),  
+            ('attack_speed', 'Attack Speed', '+5% Attack Speed'),  
+            ('projectile_size', 'Projectile Size', '+20% Size'), 
+            ('projectile_speed', 'Projectile Speed', '+20% Speed'),  
+            ('crit_chance', 'Crit Chance', '+5% Crit Chance'),  
+            ('health_regen', 'Health Regen', '+0.3 HP/s'),  
+            ('exp_growth', 'EXP Gain', '+10% EXP'),  
+            ('crit_multiplier', 'Crit Damage', '+0.5x Multiplier')  
+        ] #DO: surely more balanced
     #DO: list of possible weapon upgrades
         weapon_upgrades = []
         available_weapons = ['plasma','bubble','laser']
@@ -801,7 +818,7 @@ class App(): #DO: Define the main application class
         success = self.player_stats.upgrade(upgrade_type) #DO: calls the player stats code to check for an upgrade (and to apply it within the player code)
         if success:
             if upgrade_type == 'move_speed': 
-                self.player.speed = 300 * self.player_stats.move_speed_multiplier
+                self.player.speed = 350 * self.player_stats.move_speed_multiplier
             elif upgrade_type == 'max_health':
                 self.player.health = self.player_stats.current_health
                 self.player.max_health = self.player_stats.max_health
@@ -855,24 +872,31 @@ class App(): #DO: Define the main application class
     
     
     def draw_hud(self):
-        # DO: Health bar
+        # DO: health bar
         health_percentage = self.player.health / self.player.max_health
         health_width = 200
         pygame.draw.rect(self.screen, (50, 50, 50), (20, 20, health_width, 20))
         pygame.draw.rect(self.screen, (255, 50, 50), (20, 20, int(health_width * health_percentage), 20))
         pygame.draw.rect(self.screen, (255, 255, 255), (20, 20, health_width, 20), 2)
         
-        # DO: Health text
+        # DO: health text
         font = pygame.font.Font(None, 24)
         health_text = font.render(f"HP: {int(self.player.health)}/{self.player.max_health}", True, (255, 255, 255))
         self.screen.blit(health_text,(230,20))
 
         #DO: level tracking text
         level_text = font.render(f"Lvl: {self.player_stats.level}", True, (255, 255, 255))
-        exp_text = font.render(f"EXP: {self.player_stats.exp}/{self.player_stats.exp_to_next_level}", True, (100, 200, 255))
+        exp_text = font.render(f"EXP: {self.player_stats.exp}/{self.player_stats.exp_to_next_level}", True, (21, 71, 52))
         
         self.screen.blit(level_text, (20, 50))
         self.screen.blit(exp_text, (20, 75))
+       
+        #DO: in game clock
+        game_time_seconds = (pygame.time.get_ticks() - self.game_start_time) // 1000
+        minutes = game_time_seconds // 60
+        seconds = game_time_seconds % 60
+        time_text = font.render(f"Time: {minutes:02d}:{seconds:02d}", True, (200, 200, 200))
+        self.screen.blit(time_text, (20, 100))
         
         
     def spawn_at_edge(self,enemy_type):  #DO: Spawn enemy at screen edge with random angle
@@ -882,7 +906,7 @@ class App(): #DO: Define the main application class
         
         #DO: Use screen dimensions for edge spawning
         screen_width, screen_height = self.size
-        spawn_distance = max(screen_width, screen_height) // 2  # Distance to edge
+        spawn_distance = max(screen_width, screen_height) // 2  #DO: distance to edge of screen
         
         #DO: Generate random angle
         angle = random.uniform(0, 2 * math.pi)
@@ -894,7 +918,16 @@ class App(): #DO: Define the main application class
         return Enemy(enemy_x, enemy_y, enemy_type)
     
     def on_spawn(self,number_enemies,boss=False): #WB: Makes the enemies spawn in the game 
-
+        if boss == True:
+            enemy_type = 'boss'
+            new_enemy = self.spawn_at_edge(enemy_type)
+            base_hp = 3000 #DO: Boss base health
+            new_enemy.max_health = self.calculate_enemy_health(base_hp)
+            new_enemy.health = new_enemy.max_health
+            
+            self.enemies.add(new_enemy)
+            self.all_sprites.add(new_enemy)
+        
         if len(self.enemies) < number_enemies: #WB: There is always a fixed number of x enemies in the game. If the number is lower than 3, it adds more enemies so that the number stays 3.
             chance = random.random() #WB: Randomly selects the enemy to add to the game based on probability     
             #WB: Each enemy has a likely or less likely chance to appear on screen
@@ -907,8 +940,7 @@ class App(): #DO: Define the main application class
                 'strong' : 70,
                 'boss' : 250
             }
-            if boss == True:
-                enemy_type = 'boss'
+            
             new_enemy = self.spawn_at_edge(enemy_type) #WB: Creates a variable to add the new enemy
             base_hp = base_health[enemy_type]
             new_enemy.max_health = self.calculate_enemy_health(base_hp)
@@ -919,56 +951,51 @@ class App(): #DO: Define the main application class
 
     def resolve_enemy_overlaps(self):
         #DO:Enemies are overlapping this is unacceptable
-        enemies_list = list(self.enemies) #DO: list of evil guys
-
-        for i ,enemy1 in enumerate(enemies_list):
+     # DO: Enemies are overlapping this is unacceptable
+        enemies_list = list(self.enemies) #DO: list of mr evil guys
+        
+        for i, enemy1 in enumerate(enemies_list): #DO: enumerate allows us to index the enemies in the list without manueal indexing
             for enemy2 in enemies_list[i+1:]:
-                if enemy1.rect.colliderect(enemy2.rect):
-                    overlap = enemy1.rect.clip(enemy2.rect) #DO: creates a rectangle based on the "clip" or overlap of the existing rectangnles
+                # DO: uses mask collision instead of rect collision
+                if pygame.sprite.collide_mask(enemy1, enemy2):
+                    #DO: calculate overlap using rects for push strength
+                    overlap_rect = enemy1.rect.clip(enemy2.rect)
                     
-                    #DO: push amount based on centres
+                    # DO: push amount based on centres
                     dx = enemy1.rect.centerx - enemy2.rect.centerx
                     dy = enemy1.rect.centery - enemy2.rect.centery
                     
                     if dx == 0 and dy == 0:
-                        dx, dy = 1, 0  # Default push right
+                        dx, dy = 1, 0  #DO: push right to avodi division by zero if both were 0
                     
-                    # Normalize
+                    #DO: Normalize the distance pushed
                     distance = math.sqrt(dx*dx + dy*dy)
                     if distance > 0:
                         dx, dy = dx/distance, dy/distance
                         
-                        # Push based on overlap size (more overlap = stronger push)
-                        push_strength = min(overlap.width, overlap.height) * 0.5
-                        push_strength = max(2, min(10, push_strength))  # Clamp between 2-10
+                        #DO: Push based on overlap size (more overlap = stronger push)
+                        push_strength = min(overlap_rect.width, overlap_rect.height) * 0.5
+                        push_strength = max(2, min(10, push_strength))  #DO: avoid pushing too much
                         
                         enemy1.rect.x += dx * push_strength
                         enemy1.rect.y += dy * push_strength
-                        enemy2.rect.x-=dx*push_strength
-                        enemy2.rect.y -= dy*push_strength
+                        enemy2.rect.x -= dx * push_strength
+                        enemy2.rect.y -= dy * push_strength
+
 
     def on_loop(self): #DO: Main loop logic
+        current_time = pygame.time.get_ticks() #DO: there is some code in here using this and id rather not look for it.
         if self.game_paused:
             if self.upgrade_gui_active:
                 self.handle_upgrade_selection()
             return
-        current_time = pygame.time.get_ticks()
-        game_time_minutes = self.get_game_time_minutes()
-        if game_time_minutes >= 5 and not hasattr(self, 'first_boss_spawned'):
-            self.on_spawn(1,boss=True)
-            self.first_boss_spawned = True
-        elif game_time_minutes >= 12 and not hasattr(self,'second_boss_spawned'):
-            self.on_spawn(1,boss=True)
-            self.second_boss_spawned = True
-        elif game_time_minutes >= 25 and not hasattr(self,'third_boss_spawned'):
-            self.on_spawn(1,boss=True)
-            self.third_boss_spawned = True
+      
         #DO: calculate attack interval based on player stats
        # attack_interval_1 = self.player_stats.get_attack_interval(self.attack_interval_1_base)
         #attack_interval_2 = self.player_stats.get_attack_interval(self.attack_interval_2_base)
 
         #DO: Player movespeed
-        self.player.speed = 300 *self.player_stats.move_speed_multiplier
+        self.player.speed = 350 *self.player_stats.move_speed_multiplier
         #DO: health regen
         self.player_stats.current_health = min(self.player_stats.max_health, self.player_stats.current_health +self.player_stats.health_regen *self.dt)
         
@@ -1056,11 +1083,11 @@ class App(): #DO: Define the main application class
         #DO: Checks for player-enemy collisions
         for enemy in self.enemies:
                 if isinstance (enemy, Enemy): #WB: Handles the case where the enemy hits the player
-                    if enemy.rect.colliderect(self.player.rect) and not self.player.invincible: #DO: Player has not been hit in the last half a second
-                        self.player.health -= enemy.damage #WB: When the player is hit by an enemy it loses health points
-                        self.player.begin_invincibility() #DO: starts recovery frames
+                    if pygame.sprite.collide_mask(self.player, enemy) and not self.player.invincible: #DO: collision logic but with masks
+                        self.player.health -= enemy.damage
+                        self.player.begin_invincibility()
                         print(f"Player hit! at {pygame.time.get_ticks()}")
-                        break #DO: exit the for loop upon hit
+                        break
                     
                     #WB: Checks if player is dead
                     if self.player.health <= 0: 
@@ -1113,27 +1140,41 @@ class App(): #DO: Define the main application class
         game_time_minutes = self.get_game_time_minutes()
         #DO: Basic enemy progression
         if game_time_minutes < 1:
-            self.on_spawn(4)
+            self.on_spawn(3)
         elif game_time_minutes < 2:
-            self.on_spawn(6)  # Keep 5 enemies
+            self.on_spawn(6)
+        elif game_time_minutes < 3:
+            self.on_spawn(12)
         elif game_time_minutes < 5:
-            self.on_spawn(8)  # Keep 8 enemies
-        elif game_time_minutes < 10:
-            self.on_spawn(12) # Keep 12 enemies
+            self.on_spawn(25)  
+        elif game_time_minutes < 8:
+            self.on_spawn(40) 
+        elif game_time_minutes < 12:
+            self.on_spawn(65)
         elif game_time_minutes < 15:
-            self.on_spawn(15) # Keep 15 enemies
+            self.on_spawn(100) 
         else:
-            self.on_spawn(20) # Keep 20 enemies
+            self.on_spawn(150) 
+
+        if game_time_minutes >= 3 and not hasattr(self, 'first_boss_spawned'):
+            self.on_spawn(1,boss=True)
+            self.first_boss_spawned = True
+        elif game_time_minutes >= 8 and not hasattr(self,'second_boss_spawned'):
+            self.on_spawn(1,boss=True)
+            self.second_boss_spawned = True
+        elif game_time_minutes >= 15 and not hasattr(self,'third_boss_spawned'):
+            self.on_spawn(1,boss=True)
+            self.third_boss_spawned = True
         
-        # Boss spawn spikes - triple enemies 1 minute before bosses
-        if 4 <= game_time_minutes < 5 and not hasattr(self, 'first_boss_spike'):
-            self.on_spawn(25)  # Spike to 25 enemies
+        #DO: Boss spawn spikes - triple enemies 1 minute before bosses
+        if 3 <= game_time_minutes < 5 and not hasattr(self, 'first_boss_spike'):
+            self.on_spawn(50)  #DO: Spike to 25 enemies
             self.first_boss_spike = True
         if 11 <= game_time_minutes < 12 and not hasattr(self, 'second_boss_spike'):
-            self.on_spawn(35)  # Spike to 35 enemies
+            self.on_spawn(70)  #DO: spike to 35 enemies
             self.second_boss_spike = True#WB: Makes the enemies spawn 
         if 24 <= game_time_minutes < 25 and not hasattr(self, 'third_boss_spike'):
-            self.on_spawn(45)  # Spike to 45 enemies
+            self.on_spawn(80)  #DO: spike to 45 enemies
             self.third_boss_spike = True
         self.resolve_enemy_overlaps()
             
@@ -1143,31 +1184,49 @@ class App(): #DO: Define the main application class
         #DO: shoots differently depending on weapon 
         if weapon_type == 'plasma':
             #DO: thanks FS ill be using ur thing as a frame work for this
-            direction = self.player.current_direction
-            if direction == 'left':
-                angle = math.pi
+            nearest_enemy = None
+            min_distance = float('inf') #DO: infinity
+            
+            for enemy in self.enemies:
+                if hasattr(enemy, 'rect'):
+                    dx = enemy.rect.centerx - self.player.rect.centerx
+                    dy = enemy.rect.centery - self.player.rect.centery
+                    distance = math.sqrt(dx*dx + dy*dy) #DO: dist from us to them
+                    
+                    if distance < min_distance:
+                        min_distance = distance
+                        nearest_enemy = enemy
+            
+            #DO: Calculate angle towards nearest enemy, or use default direction if no enemies
+            if nearest_enemy:
+                dx = nearest_enemy.rect.centerx - self.player.rect.centerx
+                dy = nearest_enemy.rect.centery - self.player.rect.centery
+                angle = math.atan2(dy, dx)
             else:
-                angle = 0
+                #DO:  this is iff we have no enemies (unlikely or actually impossible i believe but just in case)
+                direction = self.player.current_direction
+                angle = math.pi if direction == 'left' else 0
+            
             velocity = 800 * self.player_stats.projectile_speed_multiplier
             base_damage = self.player_stats.get_weapon_damage('plasma')
             damage_value, is_crit = self.player_stats.calculate_damage(base_damage)
-            #DO: crit, base damage, and bullet velocity
+            
             projectile = self.player.player_projectile(velocity, angle, 'plasma', damage_value)
-
-            #DO: if crit show that !
-            if is_crit: projectile.image.fill((255,255,100))
-
+            
+            if is_crit: 
+                projectile.image.fill((255,255,100))
+            
             return [projectile]
         elif weapon_type == 'bubble':
             velocity = 1000 * self.player_stats.projectile_speed_multiplier
             base_damage = self.player_stats.get_weapon_damage('bubble')
-            num_shots = 6 + self.player_stats.weapon_levels['bubble'] * 2
+            num_shots = 8 + self.player_stats.weapon_levels['bubble'] * 2
             
             #DO: we get more shots per level for MR. bubbly
             projectiles = []
             for i in range(num_shots):
-                angle = i*(2*math.pi) / num_shots
-                damage_value,is_crit = self.player_stats.calculate_damage(base_damage)
+                angle = i * (2 * math.pi) / num_shots
+                damage_value, is_crit = self.player_stats.calculate_damage(base_damage)
                 projectile = self.player.player_projectile(velocity, angle, 'bubble', damage_value)
                 projectiles.append(projectile)
             return projectiles
@@ -1180,15 +1239,21 @@ class App(): #DO: Define the main application class
             velocity = 2000 * self.player_stats.projectile_speed_multiplier
             base_damage = self.player_stats.get_weapon_damage('laser')
             damage_value, is_crit = self.player_stats.calculate_damage(base_damage)
-            num_shots = min(4,1+ self.player_stats.weapon_levels['laser']) #DO: caps the bullets shot at 4
+            num_shots = min(5,1 + self.player_stats.weapon_levels['laser']) #DO: caps the bullets shot at 5
             spread_angle = math.radians(10)
+            laser_crit_chance = (.25 + (self.player_stats.weapon_levels['laser'] * .1)) + self.player_stats.crit_chance
+            laser_crit_damage = 2. + self.player_stats.crit_multiplier
             
             projectiles = []
             for i in range(num_shots):
                 angle_offset = spread_angle * (i - (num_shots - 1) / 2)
                 angle = base_angle + angle_offset
-            
+                # DO: Use the combined crit system
                 damage_value, is_crit = self.player_stats.calculate_damage(base_damage)
+                # DO: Apply laser crit on top of player crit
+                if random.random() < laser_crit_chance:
+                    damage_value *= laser_crit_damage  #DO: crit damage multiplier
+                    is_crit = True
                 projectile = self.player.player_projectile(velocity, angle, 'laser', damage_value)
             
                 if is_crit:
