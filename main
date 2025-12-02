@@ -216,25 +216,33 @@ class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
         # FS: Turns out there's no need for the projectile sprite sheet! right now at least, im satisfied with these.
         size_map = { #FS: yeah, just add any entries here for new projectile types
             'plasma': 8,
-            'laser': 4,
+            'laser': 8,
             'bubble': 18,
-            'bomb': random.uniform(10,35),
+            'bomb': random.uniform(10,35), #FS: bomb projectiles have random sizes
         }
         color_map = { #FS: projectile colors yipeeeeeeeee
             'plasma': (255, 255, 0),
-            'laser': (50, 150, 255),
+            'laser': (255, 255, 255),
             'bubble': (50, 0, 255),
             'bomb': (255,255,255),
         }
-        radius = size_map.get(self.projectile_type, 8)
-        color = color_map.get(self.projectile_type, (255, 255, 255))
-        self.image = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, color, (radius, radius), radius)
-        # FS: making bubbles, yknow, look cool
-        if self.projectile_type == 'bubble':
-            pygame.draw.circle(self.image, (255, 255, 255), (radius, radius), max(0, radius-3)) #FS: overlays a second circle for S T Y L E
-        if self.projectile_type == 'bomb':
-            pygame.draw.circle(self.image, (random.uniform(150,255),random.uniform(0,100),random.uniform(50,150)), (radius, radius), max(0, radius-2))
+        radius = size_map.get(self.projectile_type, 8)  #FS: reads projectile size from map and defaults to 8 if not found.
+        color = color_map.get(self.projectile_type, (255, 255, 255))  #FS: reads projectile color from map and defaults to white if not found.
+        # FS: Lasers use rectangles man, not circles
+        if self.projectile_type == 'laser':
+            length = int(radius * 10)  # make lasers visually longer
+            thickness = int(radius)
+            self.image = pygame.Surface((length, thickness), pygame.SRCALPHA)
+            pygame.draw.rect(self.image, color, (0, 0, length, thickness))
+        else:
+            self.image = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
+            if self.projectile_type in ['plasma', 'bubble', 'bomb']:  #FS: handles circular projectiles, including plasma, bubbles, and bomb fragments.
+                pygame.draw.circle(self.image, color, (radius, radius), radius)
+            # FS: making bubbles, yknow, look cool
+            if self.projectile_type == 'bubble':
+                pygame.draw.circle(self.image, (255, 255, 255), (radius, radius), max(0, radius-3))  #FS: overlays a second circle for S T Y L E
+            if self.projectile_type == 'bomb':  #FS: allows bomb projectiles to have random warm colors
+                pygame.draw.circle(self.image, (random.uniform(150,255),random.uniform(0,100),random.uniform(50,150)), (radius, radius), max(0, radius-2))
         self.radius = radius
         self.rect = self.image.get_rect(center=(self.x, self.y))
 
