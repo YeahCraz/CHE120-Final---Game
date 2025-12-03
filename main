@@ -583,7 +583,7 @@ class Enemy(pygame.sprite.Sprite): #WB: Define the enemy class
         self.moving = (distance > 0)  #WB: Makes the enemy always move even when the player isn't moving
     
         if distance > 0:  #WB: The enemy will always chase the player as long as it is not on top of the player
-            direction = direction.normalize()  #WB: Noramlizwe the direction to make the length equal to 1 so that the enemy's speed stays constant
+            direction = direction.normalize()  #WB: Noramlizee the direction to make the length equal to 1 so that the enemy's speed stays constant
             self.rect.x += direction.x * self.speed * dt #WB: Moves enemy left and right
             self.rect.y += direction.y * self.speed * dt #WB: Moves enemy down and up
         
@@ -723,8 +723,8 @@ class App(): #DO: Define the main application class
         player_positiony = self.player.rect.centery 
         self.all_sprites.add(self.player) #DO: Add player to the all_sprites group
         enemy_1 = Enemy (player_positionx +1000, player_positiony, "standard") #WB: Add standard enemy and make it start 1000 pixels to the right of player
-        enemy_2 = Enemy (player_positionx, player_positiony + 2000, "moderate") #WB: Add moderate enemy and make it start 200 pixels higher than the player
-        enemy_3 = Enemy (player_positionx - 4000, player_positiony - 3000, "strong") #WB: Add strong enemy and make it start 400 pixels to the left of the player and 300 pixels lower
+        enemy_2 = Enemy (player_positionx, player_positiony + 2000, "moderate") #WB: Add moderate enemy and make it start 2000 pixels higher than the player
+        enemy_3 = Enemy (player_positionx - 4000, player_positiony - 3000, "strong") #WB: Add strong enemy and make it start 4000 pixels to the left of the player and 3000 pixels lower
         self.all_sprites.add(enemy_1, enemy_2, enemy_3) #WB: Add enemy to the all_sprites group
         self.enemies.add(enemy_1, enemy_2,enemy_3) #WB: Add player to the enemy group
         #DO: Walls
@@ -771,7 +771,7 @@ class App(): #DO: Define the main application class
         game_time_minutes = self.get_game_time_minutes()
         time_factor = min(game_time_minutes / 10, 4.0)  
         return base_health * (1 + time_factor * 1.5)
-#DO: nemy spawn rates should also evolve
+#DO: Enemy spawn rates should also evolve
     def get_enemy_spawn_weights(self):
         game_time_minutes = self.get_game_time_minutes()
         if game_time_minutes < 5:
@@ -928,7 +928,7 @@ class App(): #DO: Define the main application class
             self.enemies.add(new_enemy)
             self.all_sprites.add(new_enemy)
         
-        if len(self.enemies) < number_enemies: #WB: There is always a fixed number of x enemies in the game. If the number is lower than 3, it adds more enemies so that the number stays 3.
+        if len(self.enemies) < number_enemies: #WB: There is always a fixed number of x enemies in the game. If the number is lower than that one, it adds more enemies so that the number stays the same.
             chance = random.random() #WB: Randomly selects the enemy to add to the game based on probability     
             #WB: Each enemy has a likely or less likely chance to appear on screen
             weights = self.get_enemy_spawn_weights()
