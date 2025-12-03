@@ -1,3 +1,8 @@
+#DO: Darius Obeyesekere
+#WB: Winnie Bui
+#FS: Franz Santos
+
+
 #DO: Please use two spaces to seperate functions and classes
 #DO: also list variables for certain proerties seperately. Place variables at the beginning of the class if possible please
 #DO: also comment your intials prior to commenting so we know who to ask if we have any question
@@ -211,21 +216,33 @@ class Projectile(pygame.sprite.Sprite): #FS: Projectile Class
         # FS: Turns out there's no need for the projectile sprite sheet! right now at least, im satisfied with these.
         size_map = { #FS: yeah, just add any entries here for new projectile types
             'plasma': 8,
-            'laser': 4,
+            'laser': 8,
             'bubble': 18,
+            'bomb': random.uniform(10,35), #FS: bomb projectiles have random sizes
         }
         color_map = { #FS: projectile colors yipeeeeeeeee
             'plasma': (255, 255, 0),
-            'laser': (50, 150, 255),
+            'laser': (255, 255, 255),
             'bubble': (50, 0, 255),
+            'bomb': (255,255,255),
         }
-        radius = size_map.get(self.projectile_type, 8)
-        color = color_map.get(self.projectile_type, (255, 255, 255))
-        self.image = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
-        pygame.draw.circle(self.image, color, (radius, radius), radius)
-        # FS: making bubbles, yknow, look cool
-        if self.projectile_type == 'bubble':
-            pygame.draw.circle(self.image, (255, 255, 255), (radius, radius), max(0, radius-3)) #FS: overlays a second circle for S T Y L E
+        radius = size_map.get(self.projectile_type, 8)  #FS: reads projectile size from map and defaults to 8 if not found.
+        color = color_map.get(self.projectile_type, (255, 255, 255))  #FS: reads projectile color from map and defaults to white if not found.
+        # FS: Lasers use rectangles man, not circles
+        if self.projectile_type == 'laser':
+            length = int(radius * 10)  # make lasers visually longer
+            thickness = int(radius)
+            self.image = pygame.Surface((length, thickness), pygame.SRCALPHA)
+            pygame.draw.rect(self.image, color, (0, 0, length, thickness))
+        else:
+            self.image = pygame.Surface((radius*2, radius*2), pygame.SRCALPHA)
+            if self.projectile_type in ['plasma', 'bubble', 'bomb']:  #FS: handles circular projectiles, including plasma, bubbles, and bomb fragments.
+                pygame.draw.circle(self.image, color, (radius, radius), radius)
+            # FS: making bubbles, yknow, look cool
+            if self.projectile_type == 'bubble':
+                pygame.draw.circle(self.image, (255, 255, 255), (radius, radius), max(0, radius-3))  #FS: overlays a second circle for S T Y L E
+            if self.projectile_type == 'bomb':  #FS: allows bomb projectiles to have random warm colors
+                pygame.draw.circle(self.image, (random.uniform(150,255),random.uniform(0,100),random.uniform(50,150)), (radius, radius), max(0, radius-2))
         self.radius = radius
         self.rect = self.image.get_rect(center=(self.x, self.y))
 
@@ -704,6 +721,8 @@ class App(): #DO: Define the main application class
         }
 
         self.damage_numbers = pygame.sprite.Group()
+        # FS: Bombs available to player
+        self.bomb_count = 3
 
     
     def on_init(self): #DO: Calls pygame.init()
@@ -763,6 +782,29 @@ class App(): #DO: Define the main application class
     def on_event(self, event): #DO: Handle events
         if event.type == pygame.QUIT: #DO: if the user clicks the close button ends program
             self._running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_x:
+                # Use a bomb if available: fires multiple rings of random bullets
+                if self.bomb_count > 0:
+                    self.bomb_count -= 1
+                    num_rings = 4
+                    shots_per_ring = 20
+                    base_velocity = 200
+                    velocity_step = 120
+                    projectile_type = 'bomb'
+                    damage_value = 1000
+                    for ring in range(num_rings):
+                        vel = base_velocity + ring * velocity_step
+                        # generate randomly spaced angles around the circle
+                        angles = sorted([random.uniform(0, 2 * math.pi) for shots in range(shots_per_ring)])
+                        for angle in angles:
+                            self.player.player_projectile(vel + random.uniform(0,50), angle, projectile_type, damage_value)
+                else:
+                    # FS: no bombs left; ignore
+                    pass
+
+                        
+            
     def get_game_time_minutes(self):
         #DO: how many minutes has it been since game began?
         return (pygame.time.get_ticks() - self.game_start_time) / 60000. #DO: conversion of ms to min
@@ -897,6 +939,9 @@ class App(): #DO: Define the main application class
         seconds = game_time_seconds % 60
         time_text = font.render(f"Time: {minutes:02d}:{seconds:02d}", True, (200, 200, 200))
         self.screen.blit(time_text, (20, 100))
+        # FS: Bomb count display
+        bomb_text = font.render(f"Bombs Remaining: {self.bomb_count}", True, (255, 215, 0))
+        self.screen.blit(bomb_text, (20, 125))
         
         
     def spawn_at_edge(self,enemy_type):  #DO: Spawn enemy at screen edge with random angle
